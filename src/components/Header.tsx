@@ -9,6 +9,12 @@ export function Header() {
       </Link>
       <nav className="flex items-center gap-2 text-[13px] font-semibold">
         <Link
+          href="/play"
+          className="rounded-full border border-line px-3 py-1.5 text-paper transition-colors hover:border-gold hover:text-gold"
+        >
+          Play
+        </Link>
+        <Link
           href="/daily"
           className="rounded-full border border-line px-3 py-1.5 text-paper transition-colors hover:border-gold hover:text-gold"
         >

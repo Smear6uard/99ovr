@@ -40,7 +40,7 @@ export default function AboutPage() {
         <h2 className="font-display text-xl uppercase text-gold">The rules</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5 text-paper/90">
           <li>You get <strong>$15</strong> to fill six skill slots: jumpshot, handles, finishing, defense, athleticism, IQ.</li>
-          <li>Each slot offers five players — one per price tier, $1 to $5 — drawn from a bigger pool. One re-roll per slot.</li>
+          <li>Each slot offers five players — one per price tier, $1 to $5 — drawn from a bigger pool. One re-spin per slot.</li>
           <li>Ratings are hidden. Prices are hints, not promises.</li>
           <li>Skills interact: elite finishing on $1 legs gets throttled. Spend accordingly.</li>
           <li>Then you take one <strong>fatal flaw</strong>. It's mandatory. It will haunt you.</li>
@@ -76,11 +76,14 @@ export default function AboutPage() {
       <section className="mt-6">
         <h2 className="font-display text-xl uppercase text-gold">Modes</h2>
         <p className="mt-2 text-paper/90">
-          <Link href="/" className="text-gold underline underline-offset-2">Sandbox</Link> is unlimited.{" "}
+          <Link href="/play" className="text-gold underline underline-offset-2">Play</Link> is the
+          unlimited sandbox.{" "}
           <Link href="/daily" className="text-gold underline underline-offset-2">Daily</Link> gives everyone the
           same shop and one official run per UTC day — with a streak and a copy-paste result block built for the
-          group chat. Every finished build gets a share link that challenges anyone who opens it to beat it from
-          the same shop.
+          group chat.{" "}
+          <Link href="/play?mode=knowledge" className="text-gold underline underline-offset-2">Ball Knowledge</Link>{" "}
+          is hard mode: no scouting notes, just names and prices. Every finished build gets a share link that
+          challenges anyone who opens it to beat it from the same shop.
         </p>
       </section>
 

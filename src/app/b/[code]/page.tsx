@@ -55,7 +55,7 @@ export default async function BuildPage({ params }: Props) {
       />
 
       <Link
-        href={`/?vs=${code}`}
+        href={`/play?vs=${code}`}
         className="mt-4 block w-full rounded-lg bg-gold py-4 text-center font-display text-2xl uppercase tracking-wide text-ink shadow-[0_8px_28px_rgba(242,185,75,0.3)] transition-transform active:scale-[0.99]"
       >
         Beat this build
@@ -67,7 +67,7 @@ export default async function BuildPage({ params }: Props) {
       <GauntletLog result={result} />
 
       <Link
-        href="/"
+        href="/play"
         className="mt-6 block w-full rounded-lg border border-line py-3 text-center font-display text-lg uppercase tracking-wide text-paper transition-colors hover:border-gold hover:text-gold"
       >
         Build from scratch
