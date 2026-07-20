@@ -92,6 +92,9 @@ export function ResultCard({
             <span className="text-gold">99</span>OVR
           </span>
           <span className="flex items-center gap-2">
+            {build.knowledge ? (
+              <span className="rounded-sm border border-gold/70 px-1.5 py-0.5 text-gold">🧠 BALL KNOWLEDGE</span>
+            ) : null}
             {modeChip ? <span className="rounded-sm border border-line px-1.5 py-0.5">{modeChip}</span> : null}
             <span className="rounded-sm border border-line px-1.5 py-0.5">SIM #{build.attempt + 1}</span>
           </span>

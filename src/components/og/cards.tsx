@@ -172,6 +172,22 @@ export function OgLandscape({ result }: { result: SimResult }) {
             >
               {build.mode === "daily" ? `DAILY #${build.daily}` : "SANDBOX BUILD"}
             </span>
+            {build.knowledge ? (
+              <span
+                style={{
+                  fontFamily: "Inter",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  color: GOLD,
+                  border: `2px solid ${GOLD}`,
+                  borderRadius: 6,
+                  padding: "3px 10px",
+                  letterSpacing: 3,
+                }}
+              >
+                BALL KNOWLEDGE
+              </span>
+            ) : null}
           </div>
 
           <div style={{ display: "flex", alignItems: "flex-end", gap: 26, marginTop: -20 }}>
@@ -309,6 +325,22 @@ export function OgPortrait({ result }: { result: SimResult }) {
           >
             {build.mode === "daily" ? `DAILY #${build.daily}` : `SIM #${build.attempt + 1}`}
           </span>
+          {build.knowledge ? (
+            <span
+              style={{
+                fontFamily: "Inter",
+                fontWeight: 700,
+                fontSize: 18,
+                color: GOLD,
+                border: `2px solid ${GOLD}`,
+                borderRadius: 6,
+                padding: "4px 12px",
+                letterSpacing: 3,
+              }}
+            >
+              BALL KNOWLEDGE
+            </span>
+          ) : null}
         </div>
 
         <span style={{ fontFamily: "Anton", fontSize: 380, color: hex, lineHeight: 1, position: "relative" }}>

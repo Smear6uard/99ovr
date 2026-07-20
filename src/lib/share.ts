@@ -19,12 +19,12 @@ export function resultText(result: SimResult, code: string): string {
     fellAt === null
       ? "🪜 Cleared all 10 rungs"
       : `🪜 Fell at Rung ${fellAt} (${GAUNTLET[fellAt - 1].shortName})`;
-  return [
+  const lines = [
     `99OVR — ${derived.ovr} OVR · ${archetype.name}`,
-    ladderLine,
-    squares,
-    `Beat my build → ${buildUrl(code)}`,
-  ].join("\n");
+  ];
+  if (result.build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
+  lines.push(ladderLine, squares, `Beat my build → ${buildUrl(code)}`);
+  return lines.join("\n");
 }
 
 export async function copyText(text: string): Promise<boolean> {
