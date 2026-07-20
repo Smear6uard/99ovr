@@ -95,6 +95,8 @@ export type BuildCode = {
   attempt: number;
   /** daily number; 0 for sandbox */
   daily: number;
+  /** Ball Knowledge modifier — cosmetic to the sim; encoded in the code */
+  knowledge: boolean;
 };
 
 export type SynergyHit = {

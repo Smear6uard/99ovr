@@ -15,6 +15,7 @@ function randomValidBuild(rng: () => number): BuildCode | null {
     flaw: rngInt(rng, 10),
     attempt: rngInt(rng, 1000),
     daily: rngInt(rng, 500),
+    knowledge: rng() < 0.5,
   };
   return validateBuild(build) ? build : null;
 }
@@ -63,8 +64,28 @@ describe("encodeBuild/decodeBuild", () => {
       flaw: 0,
       attempt: 0,
       daily: 0,
+      knowledge: false,
     };
     expect(validateBuild(allFives)).toBe(false);
     expect(decodeBuild(encodeBuild(allFives))).toBeNull();
+  });
+
+  it("round-trips the knowledge flag both ways", () => {
+    const rng = mulberry32(0x5eed);
+    let base: BuildCode | null = null;
+    while (!base) base = randomValidBuild(rng);
+    for (const knowledge of [true, false]) {
+      const b: BuildCode = { ...base, knowledge };
+      expect(decodeBuild(encodeBuild(b))).toEqual(b);
+    }
+  });
+
+  it("a knowledge:false code is byte-compatible with legacy codes (high bit clear)", () => {
+    const rng = mulberry32(0xabc123);
+    let base: BuildCode | null = null;
+    while (!base) base = randomValidBuild(rng);
+    const legacy: BuildCode = { ...base, knowledge: false };
+    const code = decodeBuild(encodeBuild(legacy));
+    expect(code?.knowledge).toBe(false);
   });
 });

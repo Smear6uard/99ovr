@@ -29,7 +29,7 @@ function fromBase64Url(code: string): Uint8Array | null {
 export function encodeBuild(build: BuildCode): string {
   const bytes = new Uint8Array(18);
   bytes[0] = VERSION;
-  bytes[1] = build.mode === "daily" ? 1 : 0;
+  bytes[1] = (build.mode === "daily" ? 1 : 0) | (build.knowledge ? 0x80 : 0);
   bytes[2] = (build.seed >>> 24) & 0xff;
   bytes[3] = (build.seed >>> 16) & 0xff;
   bytes[4] = (build.seed >>> 8) & 0xff;
@@ -53,14 +53,17 @@ export function decodeBuild(code: string): BuildCode | null {
   for (let i = 0; i < 17; i++) x ^= bytes[i];
   if (x !== bytes[17]) return null;
   if (bytes[0] !== VERSION) return null;
-  if (bytes[1] > 1) return null;
-  const mode: GameMode = bytes[1] === 1 ? "daily" : "sandbox";
+  const modeByte = bytes[1];
+  const modeBit = modeByte & 0x7f;
+  if (modeBit > 1) return null;
+  const mode: GameMode = modeBit === 1 ? "daily" : "sandbox";
+  const knowledge = (modeByte & 0x80) !== 0;
   const seed = ((bytes[2] << 24) | (bytes[3] << 16) | (bytes[4] << 8) | bytes[5]) >>> 0;
   const picks = Array.from(bytes.slice(6, 12));
   const flaw = bytes[12];
   const attempt = (bytes[13] << 8) | bytes[14];
   const daily = (bytes[15] << 8) | bytes[16];
-  const build: BuildCode = { v: VERSION, mode, seed, picks, flaw, attempt, daily };
+  const build: BuildCode = { v: VERSION, mode, seed, picks, flaw, attempt, daily, knowledge };
   if (!validateBuild(build)) return null;
   return build;
 }

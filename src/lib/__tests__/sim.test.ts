@@ -93,6 +93,7 @@ describe("determinism", () => {
     flaw: 3,
     attempt: 7,
     daily: 0,
+    knowledge: false,
   };
 
   it("same build + same seed ⇒ byte-identical result", () => {
@@ -129,7 +130,16 @@ describe("gauntlet feel", () => {
     });
     let total = 0;
     for (let attempt = 0; attempt < 40; attempt++) {
-      const r = simulate({ v: 1, mode: "sandbox", seed: 1, picks, flaw: 6, attempt, daily: 0 });
+      const r = simulate({
+        v: 1,
+        mode: "sandbox",
+        seed: 1,
+        picks,
+        flaw: 6,
+        attempt,
+        daily: 0,
+        knowledge: false,
+      });
       expect(r).not.toBeNull();
       total += r!.fellAt ?? 10;
       expect(r!.roast.length).toBeGreaterThan(0);
@@ -149,7 +159,16 @@ describe("gauntlet feel", () => {
     let cleared = 0;
     let deep = 0;
     for (let attempt = 0; attempt < 60; attempt++) {
-      const r = simulate({ v: 1, mode: "sandbox", seed: 1, picks, flaw: 0, attempt, daily: 0 })!;
+      const r = simulate({
+        v: 1,
+        mode: "sandbox",
+        seed: 1,
+        picks,
+        flaw: 0,
+        attempt,
+        daily: 0,
+        knowledge: false,
+      })!;
       if (r.fellAt === null) cleared++;
       if ((r.fellAt ?? 11) >= 6) deep++;
     }
@@ -186,8 +205,41 @@ describe("budget validation", () => {
   });
 
   it("validateBuild rejects short or over-budget builds", () => {
-    expect(validateBuild({ v: 1, mode: "sandbox", seed: 1, picks: [0, 0, 0], flaw: 0, attempt: 0, daily: 0 })).toBe(false);
-    expect(validateBuild({ v: 1, mode: "sandbox", seed: 1, picks: [0, 0, 0, 0, 0, 0], flaw: 0, attempt: 0, daily: 0 })).toBe(false);
-    expect(validateBuild({ v: 1, mode: "sandbox", seed: 1, picks: [9, 9, 9, 9, 9, 9], flaw: 0, attempt: 0, daily: 0 })).toBe(true);
+    expect(
+      validateBuild({
+        v: 1,
+        mode: "sandbox",
+        seed: 1,
+        picks: [0, 0, 0],
+        flaw: 0,
+        attempt: 0,
+        daily: 0,
+        knowledge: false,
+      })
+    ).toBe(false);
+    expect(
+      validateBuild({
+        v: 1,
+        mode: "sandbox",
+        seed: 1,
+        picks: [0, 0, 0, 0, 0, 0],
+        flaw: 0,
+        attempt: 0,
+        daily: 0,
+        knowledge: false,
+      })
+    ).toBe(false);
+    expect(
+      validateBuild({
+        v: 1,
+        mode: "sandbox",
+        seed: 1,
+        picks: [9, 9, 9, 9, 9, 9],
+        flaw: 0,
+        attempt: 0,
+        daily: 0,
+        knowledge: false,
+      })
+    ).toBe(true);
   });
 });

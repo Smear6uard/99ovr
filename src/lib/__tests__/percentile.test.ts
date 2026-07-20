@@ -13,7 +13,16 @@ function officialBuild(): BuildCode {
   const draw = drawShop(seed, []);
   // one per tier is shown $5→$1; take the $2 pick for slot 0 and $1s elsewhere → $7 total
   const picks = SLOTS.map((s, i) => draw[s][i === 0 ? 3 : 4]);
-  return { v: 1, mode: "daily", seed, picks, flaw: 2, attempt: 0, daily: dailyNumberFor(DATE) };
+  return {
+    v: 1,
+    mode: "daily",
+    seed,
+    picks,
+    flaw: 2,
+    attempt: 0,
+    daily: dailyNumberFor(DATE),
+    knowledge: false,
+  };
 }
 
 describe("dailyScore", () => {

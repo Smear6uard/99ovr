@@ -146,6 +146,7 @@ export function GameFlow({
         flaw: flawIdx,
         attempt: withAttempt,
         daily: daily?.number ?? 0,
+        knowledge: false, // wired in Task 4
       };
       const res = simulate(build);
       if (!res) {
