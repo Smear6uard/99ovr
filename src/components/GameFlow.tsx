@@ -37,6 +37,7 @@ export function GameFlow({
   official = false,
   startAttempt = 0,
   challenge = null,
+  knowledge = false,
   topPct = null,
   onOfficialComplete,
 }: {
@@ -46,6 +47,7 @@ export function GameFlow({
   official?: boolean;
   startAttempt?: number;
   challenge?: Challenge | null;
+  knowledge?: boolean;
   /** percentile v1.1 — supplied late by the parent once /api/daily-rank answers */
   topPct?: number | null;
   onOfficialComplete?: (result: SimResult, code: string, block: string) => void;
@@ -146,7 +148,7 @@ export function GameFlow({
         flaw: flawIdx,
         attempt: withAttempt,
         daily: daily?.number ?? 0,
-        knowledge: false, // wired in Task 4
+        knowledge,
       };
       const res = simulate(build);
       if (!res) {
@@ -158,7 +160,7 @@ export function GameFlow({
       setResult(res);
       setPhase("sim");
     },
-    [seed, flawIdx, mode, picks, daily, reject]
+    [seed, flawIdx, mode, picks, daily, reject, knowledge]
   );
 
   const newBuild = useCallback(() => {

@@ -16,6 +16,8 @@ export function SandboxGame() {
   const mounted = useMounted();
   const [best, setBest] = useState<BestBuild | null>(null);
 
+  const knowledge = params.get("mode") === "knowledge";
+
   const challenge = useMemo<Challenge | null>(() => {
     const vs = params.get("vs");
     if (!vs) return null;
@@ -70,10 +72,11 @@ export function SandboxGame() {
       ) : null}
 
       <GameFlow
-        key={challenge?.code ?? "sandbox"}
+        key={(challenge?.code ?? "sandbox") + (knowledge ? ":bk" : "")}
         mode="sandbox"
         fixedSeed={challenge?.seed}
         challenge={challenge}
+        knowledge={knowledge}
       />
     </div>
   );
