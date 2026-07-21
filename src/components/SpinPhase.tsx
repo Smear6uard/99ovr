@@ -10,7 +10,7 @@ import { SLOTS, SLOT_LABELS, type PoolEntry, type Price, type SlotId } from "@/l
 
 type Reel = "idle" | "spinning" | "landed";
 
-/** Self-contained price patch (kept independent of ShopPhase, which Task 7 removes). */
+/** Self-contained price patch (kept local rather than shared, now that the old shop phase is gone). */
 function PriceTag({ price }: { price: number }) {
   const hex = TIER_HEX[tierForPrice(price as Price)];
   return (

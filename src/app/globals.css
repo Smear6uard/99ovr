@@ -87,6 +87,20 @@ body {
   animation: reelBlur 1s cubic-bezier(0.15, 0.85, 0.25, 1) both;
 }
 
+/* Flaw wheel: a fate-wheel spin (rotation, not vertical blur) that decelerates,
+   overshoots, and settles with a small "clunk" — distinct from the shop's reel. */
+@keyframes wheelSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  55% { transform: rotate(1030deg) scale(1); }
+  72% { transform: rotate(1146deg) scale(1.02); }
+  84% { transform: rotate(1098deg) scale(0.99); }
+  92% { transform: rotate(1122deg) scale(1.008); }
+  100% { transform: rotate(1112deg) scale(1); }
+}
+.wheel-spin {
+  animation: wheelSpin 1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
 /* Cards dealing out after a spin lands */
 @keyframes dealIn {
   from { opacity: 0; transform: translateY(14px) scale(0.96); }

@@ -10,7 +10,7 @@ import { simulate } from "@/lib/sim";
 import { maybeRecordBest } from "@/lib/storage";
 import { SLOTS, type BuildCode, type GameMode, type SimResult, type SlotId } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
-import { FlawPhase } from "@/components/FlawPhase";
+import { FlawSpin } from "@/components/FlawSpin";
 import { GauntletLog } from "@/components/GauntletLog";
 import { ResultCard } from "@/components/ResultCard";
 import { ShareRow } from "@/components/ShareRow";
@@ -202,7 +202,7 @@ export function GameFlow({
       ) : null}
 
       {phase === "flaw" ? (
-        <FlawPhase
+        <FlawSpin
           choices={flawChoices}
           selected={flawIdx}
           onSelect={setFlawIdx}
