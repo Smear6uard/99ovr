@@ -14,7 +14,7 @@ import { FlawPhase } from "@/components/FlawPhase";
 import { GauntletLog } from "@/components/GauntletLog";
 import { ResultCard } from "@/components/ResultCard";
 import { ShareRow } from "@/components/ShareRow";
-import { ShopPhase } from "@/components/ShopPhase";
+import { SpinPhase } from "@/components/SpinPhase";
 import { SimTicker } from "@/components/SimTicker";
 
 type Phase = "shop" | "flaw" | "sim" | "result";
@@ -188,11 +188,12 @@ export function GameFlow({
   return (
     <div>
       {phase === "shop" ? (
-        <ShopPhase
+        <SpinPhase
           draw={draw}
           picks={picks}
           rerolled={rerolled}
           spend={spend}
+          knowledge={knowledge}
           shakeNonce={shakeNonce}
           onPick={handlePick}
           onReroll={handleReroll}
