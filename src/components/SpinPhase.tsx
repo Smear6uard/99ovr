@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { POOL } from "@/data/pool";
 import { canPick, type ShopDraw } from "@/lib/shop";
 import { BUDGET } from "@/lib/sim";
@@ -91,6 +91,7 @@ export function SpinPhase({
   shakeNonce,
   onPick,
   onReroll,
+  onRevise,
   onComplete,
 }: {
   draw: ShopDraw;
@@ -101,6 +102,7 @@ export function SpinPhase({
   shakeNonce: number;
   onPick: (slot: SlotId, poolIdx: number) => void;
   onReroll: (slot: SlotId) => void;
+  onRevise: (slot: SlotId) => void;
   onComplete: () => void;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -113,7 +115,9 @@ export function SpinPhase({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset the reel to idle whenever the active slot changes (advance) or is re-spun.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so this runs pre-paint — otherwise the previous
+  // slot's landed cards can flash for one frame before the reset is applied.
+  useLayoutEffect(() => {
     setReel("idle");
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -179,15 +183,23 @@ export function SpinPhase({
           </div>
         </div>
         {filled > 0 ? (
-          <div className="no-scrollbar -mx-1 mt-2 flex gap-1 overflow-x-auto px-1">
-            {SLOTS.filter((s) => picks[s] !== undefined).map((s) => (
-              <span
-                key={s}
-                className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 text-[10px] font-semibold text-paper/90"
-              >
-                {POOL[s][picks[s]!].name}
-              </span>
-            ))}
+          <div className="mt-2">
+            <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1">
+              {SLOTS.filter((s) => picks[s] !== undefined).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onRevise(s)}
+                  aria-label={`Change ${SLOT_LABELS[s]} pick — currently ${POOL[s][picks[s]!].name}`}
+                  className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 text-[10px] font-semibold text-paper/90 transition-colors hover:border-gold hover:text-gold active:scale-[0.97]"
+                >
+                  {POOL[s][picks[s]!].name}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[9px] font-semibold tracking-[0.08em] text-dim/60">
+              Tap a pick to change it
+            </p>
           </div>
         ) : null}
       </div>

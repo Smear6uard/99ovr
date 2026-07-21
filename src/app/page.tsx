@@ -33,7 +33,6 @@ export default function Home() {
           </p>
 
           <h1 className="fade-up mt-3 flex justify-center" style={{ animationDelay: "60ms" }}>
-            <span className="sr-only">99OVR</span>
             <Wordmark className="text-[82px] leading-[0.82] sm:text-8xl" />
           </h1>
 

@@ -137,6 +137,16 @@ export function GameFlow({
     });
   }, []);
 
+  // Clear a single slot's pick so the builder returns to it (fresh SPIN required).
+  // A used re-spin is not refunded — `rerolled` is untouched here.
+  const handleRevise = useCallback((slot: SlotId) => {
+    setPicks((p) => {
+      const next = { ...p };
+      delete next[slot];
+      return next;
+    });
+  }, []);
+
   const runSim = useCallback(
     (withAttempt: number) => {
       if (seed === null || flawIdx === null) return;
@@ -197,6 +207,7 @@ export function GameFlow({
           shakeNonce={shakeNonce}
           onPick={handlePick}
           onReroll={handleReroll}
+          onRevise={handleRevise}
           onComplete={() => setPhase("flaw")}
         />
       ) : null}
