@@ -1,7 +1,7 @@
 # 99OVR
 
-**Build the perfect NBA player with $15.** Six skills bought from legends, one fatal flaw,
-and a 10-rung 1v1 gauntlet that ends at MJ. Deterministic sim, daily challenge with streaks,
+**Build the perfect NBA player.** Pick a flaw for a $0–$3 refund, spend a $20 base budget
+across eight legendary skills, and face ten 1v1 bosses. Deterministic sim, positional challenges, daily streaks,
 share links that challenge friends to beat your build from the same shop.
 
 Live at [99ovr.app](https://99ovr.app).
@@ -56,10 +56,10 @@ silently no-ops.
 
 - `fnv1a` string hash + `mulberry32` PRNG — no `Math.random()` anywhere in game logic.
 - Shop draw is seeded; the daily seed is `fnv1a("99ovr-daily-" + UTC date)`, identical for everyone.
-- The sim seed hashes the six picks + flaw + mode + attempt counter, so a shared build code
+- The sim seed hashes the eight picks + flaw + position + mode + attempt counter, so a shared build code
   replays byte-identically on any device, and "Run It Back" re-rolls only the variance.
-- Build codes are 18 bytes → base64url (picks, flaw, seed, mode, attempt, checksum), decoded
-  and re-simulated on `/b/[code]` and in the edge OG images. Nothing is stored anywhere.
+- Current build codes use a versioned 21-byte base64url payload; the original 18-byte v1
+  decoder remains supported. Codes are re-simulated on `/b/[code]` and in edge OG images.
 
 ## Legal
 

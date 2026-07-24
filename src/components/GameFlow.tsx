@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { POOL } from "@/data/pool";
+import { FLAWS } from "@/data/flaws";
 import { formatDailyBlock } from "@/lib/daily";
 import { encodeBuild } from "@/lib/encode";
 import { freshSeed, usePrefersReducedMotion } from "@/lib/hooks";
 import { canPick, drawFlaws, drawShop, spendOf } from "@/lib/shop";
 import { simulate } from "@/lib/sim";
 import { maybeRecordBest } from "@/lib/storage";
-import { SLOTS, type BuildCode, type GameMode, type SimResult, type SlotId } from "@/lib/types";
+import { nextAttempt } from "@/lib/run";
+import { SLOTS, type BuildCode, type GameMode, type PositionMode, type SimResult, type SlotId } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
 import { FlawSpin } from "@/components/FlawSpin";
 import { GauntletLog } from "@/components/GauntletLog";
@@ -17,17 +19,18 @@ import { ShareRow } from "@/components/ShareRow";
 import { SpinPhase } from "@/components/SpinPhase";
 import { SimTicker } from "@/components/SimTicker";
 
-type Phase = "shop" | "flaw" | "sim" | "result";
+type Phase = "flaw" | "shop" | "sim" | "result";
 
 export type Challenge = {
   code: string;
   seed: number;
   ovr: number;
   archetypeName: string;
+  position: PositionMode;
 };
 
 /**
- * The whole loop: shop → flaw → sim → result → (run it back | new build).
+ * The whole loop: flaw → pack rips → sim → result → (run it back | new build).
  * Pure sim underneath; this component only owns UI state and timers.
  */
 export function GameFlow({
@@ -38,6 +41,7 @@ export function GameFlow({
   startAttempt = 0,
   challenge = null,
   knowledge = false,
+  position = "ALL",
   topPct = null,
   onOfficialComplete,
 }: {
@@ -48,13 +52,14 @@ export function GameFlow({
   startAttempt?: number;
   challenge?: Challenge | null;
   knowledge?: boolean;
+  position?: PositionMode;
   /** percentile v1.1 — supplied late by the parent once /api/daily-rank answers */
   topPct?: number | null;
   onOfficialComplete?: (result: SimResult, code: string, block: string) => void;
 }) {
   const reduced = usePrefersReducedMotion();
   const [seed, setSeed] = useState<number | null>(fixedSeed ?? null);
-  const [phase, setPhase] = useState<Phase>("shop");
+  const [phase, setPhase] = useState<Phase>("flaw");
   const [picks, setPicks] = useState<Partial<Record<SlotId, number>>>({});
   const [rerolled, setRerolled] = useState<SlotId[]>([]);
   const [flawIdx, setFlawIdx] = useState<number | null>(null);
@@ -68,9 +73,10 @@ export function GameFlow({
     if (seed === null) setSeed(freshSeed());
   }, [seed]);
 
-  const draw = useMemo(() => (seed !== null ? drawShop(seed, rerolled) : null), [seed, rerolled]);
+  const draw = useMemo(() => (seed !== null ? drawShop(seed, rerolled, position) : null), [seed, rerolled, position]);
   const flawChoices = useMemo(() => (seed !== null ? drawFlaws(seed) : []), [seed]);
   const spend = spendOf(picks);
+  const budget = 20 + (flawIdx === null ? 0 : FLAWS[flawIdx].refund);
 
   // toast auto-dismiss
   useEffect(() => {
@@ -118,14 +124,14 @@ export function GameFlow({
         });
         return;
       }
-      const chk = canPick(picks, slot, entry.price);
+      const chk = canPick(picks, slot, entry.price, budget);
       if (!chk.ok) {
         reject(chk.reason ?? "Over budget.");
         return;
       }
       setPicks((p) => ({ ...p, [slot]: poolIdx }));
     },
-    [picks, reject]
+    [picks, reject, budget]
   );
 
   const handleReroll = useCallback((slot: SlotId) => {
@@ -137,8 +143,8 @@ export function GameFlow({
     });
   }, []);
 
-  // Clear a single slot's pick so the builder returns to it (fresh SPIN required).
-  // A used re-spin is not refunded — `rerolled` is untouched here.
+  // Clear one pick so the builder returns to that slot. A used new pack is
+  // not refunded — `rerolled` is intentionally untouched.
   const handleRevise = useCallback((slot: SlotId) => {
     setPicks((p) => {
       const next = { ...p };
@@ -151,7 +157,7 @@ export function GameFlow({
     (withAttempt: number) => {
       if (seed === null || flawIdx === null) return;
       const build: BuildCode = {
-        v: 1,
+        v: 2,
         mode,
         seed,
         picks: SLOTS.map((s) => picks[s]!),
@@ -159,6 +165,7 @@ export function GameFlow({
         attempt: withAttempt,
         daily: daily?.number ?? 0,
         knowledge,
+        position,
       };
       const res = simulate(build);
       if (!res) {
@@ -170,7 +177,7 @@ export function GameFlow({
       setResult(res);
       setPhase("sim");
     },
-    [seed, flawIdx, mode, picks, daily, reject, knowledge]
+    [seed, flawIdx, mode, picks, daily, reject, knowledge, position]
   );
 
   const newBuild = useCallback(() => {
@@ -180,7 +187,7 @@ export function GameFlow({
     setResult(null);
     setAttempt((a) => (mode === "daily" ? a + 1 : 0));
     if (mode === "sandbox") setSeed(challenge ? challenge.seed : freshSeed());
-    setPhase("shop");
+    setPhase("flaw");
   }, [mode, challenge]);
 
   if (seed === null || !draw) {
@@ -203,12 +210,13 @@ export function GameFlow({
           picks={picks}
           rerolled={rerolled}
           spend={spend}
+          budget={budget}
           knowledge={knowledge}
           shakeNonce={shakeNonce}
           onPick={handlePick}
           onReroll={handleReroll}
           onRevise={handleRevise}
-          onComplete={() => setPhase("flaw")}
+          onComplete={() => runSim(attempt)}
         />
       ) : null}
 
@@ -217,8 +225,7 @@ export function GameFlow({
           choices={flawChoices}
           selected={flawIdx}
           onSelect={setFlawIdx}
-          onAccept={() => runSim(attempt)}
-          onBack={() => setPhase("shop")}
+          onAccept={() => setPhase("shop")}
         />
       ) : null}
 
@@ -237,7 +244,7 @@ export function GameFlow({
 
           <button
             type="button"
-            onClick={() => runSim(attempt + 1)}
+            onClick={() => runSim(nextAttempt(result.build).attempt)}
             className="mt-4 w-full rounded-lg bg-gold py-4 font-display text-2xl uppercase tracking-wide text-ink shadow-[0_8px_28px_rgba(242,185,75,0.3)] transition-transform active:scale-[0.99]"
           >
             Run it back

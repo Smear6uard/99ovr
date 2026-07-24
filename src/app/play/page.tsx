@@ -4,7 +4,7 @@ import { SandboxGame } from "@/components/SandboxGame";
 
 export const metadata: Metadata = {
   title: "Play",
-  description: "Build the perfect NBA player with $15. Spin, choose, survive the gauntlet.",
+  description: "Pick a flaw, rip eight packs, and build the perfect NBA player for a $20+ budget.",
   alternates: { canonical: "/play" },
 };
 

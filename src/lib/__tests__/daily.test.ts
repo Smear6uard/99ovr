@@ -28,12 +28,13 @@ describe("daily numbering", () => {
 });
 
 describe("emoji block", () => {
-  it("matches the spec format exactly for a Rung 9 loss", () => {
+  it("matches the spec format exactly for a Round 9 loss", () => {
     const block = formatDailyBlock(fakeResult(87, "Two-Way Demon", 9), 14);
     expect(block).toBe(
       "99OVR Daily #14\n" +
-        "🏀 87 OVR · Two-Way Demon\n" +
-        "🪜 Fell at Rung 9 (LeBron)\n" +
+        "🏀 87 OVR · Superstar\n" +
+        "🧬 Two-Way Demon\n" +
+        "🏀 Round 9 Boss: LeBron\n" +
         "🟩🟩🟩🟩🟩🟩🟩🟩🟥⬛\n" +
         "99ovr.app/daily"
     );
@@ -41,10 +42,10 @@ describe("emoji block", () => {
 
   it("renders a first-rung exit and a full clear correctly", () => {
     expect(formatDailyBlock(fakeResult(48, "10-Day Contract", 1), 3)).toContain("🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛");
-    expect(formatDailyBlock(fakeResult(48, "10-Day Contract", 1), 3)).toContain("Fell at Rung 1 (Boban)");
+    expect(formatDailyBlock(fakeResult(48, "10-Day Contract", 1), 3)).toContain("Round 1 Boss: Boban");
     const clear = formatDailyBlock(fakeResult(93, "Two-Way Demon", null), 20);
     expect(clear).toContain("🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩");
-    expect(clear).toContain("🪜 Cleared all 10 rungs");
+    expect(clear).toContain("🏆 Beat all 10 bosses");
   });
 });
 

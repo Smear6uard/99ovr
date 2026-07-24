@@ -1,4 +1,4 @@
-export const SLOTS = [
+export const LEGACY_SLOTS = [
   "jumpshot",
   "handles",
   "finishing",
@@ -6,6 +6,8 @@ export const SLOTS = [
   "athleticism",
   "iq",
 ] as const;
+
+export const SLOTS = [...LEGACY_SLOTS, "passing", "durability"] as const;
 
 export type SlotId = (typeof SLOTS)[number];
 
@@ -15,7 +17,16 @@ export const SLOT_LABELS: Record<SlotId, string> = {
   finishing: "Finishing",
   defense: "Defense",
   athleticism: "Athleticism",
-  iq: "IQ / Playmaking",
+  iq: "IQ",
+  passing: "Passing",
+  durability: "Durability",
+};
+
+export const POSITIONS = ["PG", "SG", "SF", "PF", "C"] as const;
+export type Position = (typeof POSITIONS)[number];
+export type PositionMode = Position | "ALL";
+export const POSITION_LABELS: Record<Position, string> = {
+  PG: "POINT GUARD", SG: "SHOOTING GUARD", SF: "SMALL FORWARD", PF: "POWER FORWARD", C: "CENTER",
 };
 
 export type Price = 1 | 2 | 3 | 4 | 5;
@@ -41,9 +52,12 @@ export type PoolEntry = {
   /** Hidden rating. Bands: $5 93–99 · $4 86–92 · $3 78–85 · $2 68–77 · $1 45–64 */
   rating: number;
   tags?: Tag[];
-  /** ≤8 words, shown on the option card */
-  blurb: string;
+  positions: Position[];
+  /** Short, pre-authored card stat strip; two or three numbers max. */
+  stats: string[];
 };
+
+export type FlawSeverity = "Mild" | "Bad" | "Brutal" | "Career-Threatening";
 
 export type FlawEffect =
   | { kind: "lateRung"; fromRung: number; amount: number }
@@ -62,6 +76,8 @@ export type Flaw = {
   name: string;
   desc: string;
   effect: FlawEffect;
+  severity: FlawSeverity;
+  refund: 0 | 1 | 2 | 3;
   /** narrative templates when the flaw fires in the log; {opp} substituted */
   templates: string[];
 };
@@ -97,6 +113,8 @@ export type BuildCode = {
   daily: number;
   /** Ball Knowledge modifier — cosmetic to the sim; encoded in the code */
   knowledge: boolean;
+  /** v1 links omit this and use the original positionless rules. */
+  position?: PositionMode;
 };
 
 export type SynergyHit = {
@@ -115,6 +133,9 @@ export type Derived = {
   offense: number;
   defense: number;
   iq: number;
+  passing: number;
+  durability: number;
+  fatigueMod: number;
   ovr: number;
   playerPower: number;
   spend: number;
@@ -154,4 +175,5 @@ export type SimResult = {
   archetype: Archetype;
   roast: string;
   simSeed: number;
+  gauntlet: Rung[];
 };

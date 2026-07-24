@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GAUNTLET } from "@/data/gauntlet";
 import { decodeBuild } from "@/lib/encode";
 import { simulate } from "@/lib/sim";
 import { GauntletLog } from "@/components/GauntletLog";
@@ -18,8 +17,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const outcome =
     fellAt === null
       ? "cleared the whole gauntlet"
-      : `fell at Rung ${fellAt} (${GAUNTLET[fellAt - 1].shortName})`;
-  const title = `${derived.ovr} OVR ${archetype.name}`;
+      : `lost to the Round ${fellAt} boss (${result.gauntlet[fellAt - 1].shortName})`;
+  const position = result.build.position && result.build.position !== "ALL" ? ` ${result.build.position}` : "";
+  const title = `${derived.ovr} OVR${position} ${archetype.name}`;
   const description = `This $${derived.spend} build ${outcome}. Think you can beat it with the same shop?`;
   const og = `/api/og?b=${encodeURIComponent(code)}`;
   return {
@@ -61,7 +61,7 @@ export default async function BuildPage({ params }: Props) {
         Beat this build
       </Link>
       <p className="mt-1.5 text-center text-[11px] text-dim">
-        Same shop. Same prices. Your $15.
+        Same packs. Same position. Your $20 plus flaw refund.
       </p>
 
       <GauntletLog result={result} />

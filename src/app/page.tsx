@@ -40,10 +40,20 @@ export default function Home() {
             className="fade-up mx-auto mt-4 max-w-[19rem] text-[15px] leading-relaxed text-dim"
             style={{ animationDelay: "120ms" }}
           >
-            $15. Six skills from legends. One fatal flaw.{" "}
+            Eight skills from legends. One flaw that pays you back.{" "}
             <span className="font-semibold text-paper">Ten 1v1s between you and forever.</span>
           </p>
         </div>
+      </section>
+
+      <section className="fade-up mt-5" aria-label="Position challenges">
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-dim">Build the best position</p>
+        <div className="mt-2 grid grid-cols-5 gap-1.5">
+          {["PG", "SG", "SF", "PF", "C"].map((position) => (
+            <Link key={position} href={`/play?position=${position}`} className="rounded-lg border border-line bg-panel py-3 text-center font-display text-xl text-paper transition-colors hover:border-gold hover:text-gold">{position}</Link>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-dim">Position-only packs, tuned scoring, and a custom all-time boss ladder.</p>
       </section>
 
       {/* ---------- MODE CARDS (PLAY -> DAILY -> BALL KNOWLEDGE) ---------- */}
@@ -70,21 +80,21 @@ export default function Home() {
           </div>
           <h2 className="mt-2.5 font-display text-4xl uppercase leading-none text-gold">Play</h2>
           <p className="mt-2 text-[13px] leading-snug text-dim">
-            Unlimited runs. Spin your shop, build a monster, chase the number you&rsquo;ll never reach.
+            Unlimited runs. Rip packs, build a monster, chase the number you&rsquo;ll never reach.
           </p>
         </Link>
 
         {/* DAILY — live island */}
         <DailyCard />
 
-        {/* BALL KNOWLEDGE — hard mode (notes off) */}
+        {/* BALL KNOWLEDGE — hard mode (stats off) */}
         <Link
           href="/play?mode=knowledge"
           className="group block rounded-xl border border-line bg-panel2 px-5 py-4 transition-colors hover:border-gold/60"
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-dim">
-              Ball Knowledge &middot; <span className="text-loss/80">No Notes</span>
+              Ball Knowledge &middot; <span className="text-loss/80">No Stats</span>
             </span>
             <span
               className="font-display text-lg leading-none text-dim transition-colors group-hover:text-gold"
@@ -97,7 +107,7 @@ export default function Home() {
             Ball Knowledge
           </h2>
           <p className="mt-2 text-[13px] leading-snug text-dim">
-            No scouting notes. Just names. Prove you know ball.
+            Stat strips hidden. Names and prices only. Prove you know ball.
           </p>
         </Link>
       </section>
@@ -108,9 +118,9 @@ export default function Home() {
           How it works
         </p>
         <div className="mt-4 flex items-start justify-center gap-3 text-center">
-          <Step word="Spin" gloss="your shop" />
+          <Step word="Risk" gloss="pick a flaw" />
           <Sep />
-          <Step word="Build" gloss="six slots" />
+          <Step word="Rip" gloss="eight packs" />
           <Sep />
           <Step word="Survive" gloss="the gauntlet" />
         </div>

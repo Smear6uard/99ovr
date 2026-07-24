@@ -1,16 +1,20 @@
 import { POOL } from "@/data/pool";
 import { FLAWS } from "@/data/flaws";
-import { GAUNTLET } from "@/data/gauntlet";
+import { gauntletFor } from "@/data/gauntlet";
 import { assignArchetype } from "@/data/archetypes";
 import { ROASTS } from "@/data/roasts";
 import { BEATS } from "@/data/narrative";
 import { fnv1a, mulberry32, type Rng } from "@/lib/rng";
 import {
+  LEGACY_SLOTS,
+  POSITIONS,
   SLOTS,
   type BuildCode,
   type Derived,
   type Flaw,
   type PoolEntry,
+  type PositionMode,
+  type Rung,
   type ResultBand,
   type RungResult,
   type SimResult,
@@ -18,7 +22,8 @@ import {
   type Tag,
 } from "@/lib/types";
 
-export const BUDGET = 15;
+export const BUDGET = 20;
+export const LEGACY_BUDGET = 15;
 
 /* ------------------------------------------------------------------ */
 /* Synergies                                                           */
@@ -58,7 +63,7 @@ function activeSynergies(entries: PoolEntry[]): SynergyDef[] {
 /**
  * Maps raw composite scores onto the 2K-style display scale.
  * Piecewise linear, monotone. Tuned (see sim.test.ts) so the best
- * possible $15 build lands 90–94 OVR and an all-$1 build lands ~45–55.
+ * best legal v2 builds land in HOF and an all-$1 build lands near 50.
  * 99 is unreachable by construction — that's the name of the game.
  */
 const CURVE: Array<[number, number]> = [
@@ -88,7 +93,7 @@ export function curve(x: number): number {
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
-export function deriveBuild(entries: PoolEntry[]): Derived {
+export function deriveBuild(entries: PoolEntry[], position: PositionMode = "ALL"): Derived {
   const r: Record<string, number> = {};
   for (const e of entries) r[e.slot] = e.rating;
 
@@ -97,12 +102,18 @@ export function deriveBuild(entries: PoolEntry[]): Derived {
     syn.filter((s) => s.target === target || (s.target === "both" && (target === "off" || target === "def")))
       .reduce((acc, s) => acc + s.amount, 0);
 
+  const legacy = entries.length === LEGACY_SLOTS.length;
+  const passing = legacy ? r.iq : r.passing;
+  const durability = legacy ? 75 : r.durability;
   let sc = r.jumpshot * (0.6 + 0.4 * (r.handles / 99));
+  if (!legacy) sc += (passing - 70) * 0.08;
   let rp = r.finishing * (0.55 + 0.45 * (r.athleticism / 99));
   sc += bonus("sc");
   rp += bonus("rp");
 
-  let offenseRaw = 0.45 * sc + 0.35 * rp + 0.2 * r.iq;
+  let offenseRaw = legacy
+    ? 0.45 * sc + 0.35 * rp + 0.2 * r.iq
+    : 0.42 * sc + 0.3 * rp + 0.16 * r.iq + 0.12 * passing;
   let defenseRaw = r.defense * (0.7 + 0.3 * (r.athleticism / 99));
   offenseRaw += bonus("off");
   defenseRaw += bonus("def");
@@ -110,8 +121,23 @@ export function deriveBuild(entries: PoolEntry[]): Derived {
   const offense = Math.round(curve(offenseRaw));
   const defense = Math.round(curve(defenseRaw));
   const iq = r.iq;
-  const ovr = clamp(Math.round(0.5 * curve(offenseRaw) + 0.35 * curve(defenseRaw) + 0.15 * iq), 40, 99);
-  const playerPower = 0.6 * curve(offenseRaw) + 0.4 * curve(defenseRaw);
+  const profiles: Record<PositionMode, { sc: number; rp: number; off: number; def: number; iq: number; pass: number }> = {
+    ALL: { sc: 0, rp: 0, off: 0.5, def: 0.35, iq: 0.1, pass: 0.05 },
+    PG: { sc: 0.04, rp: 0, off: 0.49, def: 0.22, iq: 0.12, pass: 0.17 },
+    SG: { sc: 0.04, rp: 0, off: 0.55, def: 0.29, iq: 0.1, pass: 0.06 },
+    SF: { sc: 0, rp: 0.01, off: 0.47, def: 0.36, iq: 0.1, pass: 0.07 },
+    PF: { sc: -0.03, rp: 0.05, off: 0.4, def: 0.43, iq: 0.1, pass: 0.07 },
+    C: { sc: -0.07, rp: 0.09, off: 0.35, def: 0.5, iq: 0.08, pass: 0.07 },
+  };
+  const profile = profiles[position];
+  const profileOff = clamp(offense + profile.sc * (curve(sc) - offense) + profile.rp * (curve(rp) - offense), 0, 99);
+  const ovr = legacy
+    ? clamp(Math.round(0.5 * curve(offenseRaw) + 0.35 * curve(defenseRaw) + 0.15 * iq), 40, 99)
+    : clamp(Math.round(profile.off * profileOff + profile.def * defense + profile.iq * iq + profile.pass * passing), 40, 95);
+  const playerPower = legacy
+    ? 0.6 * curve(offenseRaw) + 0.4 * curve(defenseRaw)
+    : 0.57 * profileOff + 0.34 * defense + 0.05 * iq + 0.04 * passing;
+  const fatigueMod = legacy ? 0 : clamp((durability - 68) / 16, -2.25, 1.75);
 
   const synergies: SynergyHit[] = syn.map((s) => ({
     id: s.id,
@@ -128,6 +154,9 @@ export function deriveBuild(entries: PoolEntry[]): Derived {
     offense,
     defense,
     iq,
+    passing,
+    durability,
+    fatigueMod,
     ovr,
     playerPower,
     spend: entries.reduce((a, e) => a + e.price, 0),
@@ -141,7 +170,7 @@ export function deriveBuild(entries: PoolEntry[]): Derived {
 
 type FlawTick = { mod: number; fired: boolean; injury: boolean };
 
-function flawTick(flaw: Flaw, rungIdx: number, roll: number, quick: boolean, crafty: boolean): FlawTick {
+function flawTick(flaw: Flaw, rungIdx: number, roll: number, quick: boolean, crafty: boolean, durability: number, legacy = false): FlawTick {
   const e = flaw.effect;
   switch (e.kind) {
     case "lateRung":
@@ -151,7 +180,9 @@ function flawTick(flaw: Flaw, rungIdx: number, roll: number, quick: boolean, cra
     case "slowStart":
       return e.rungs.includes(rungIdx) ? { mod: -e.amount, fired: true, injury: false } : { mod: 0, fired: false, injury: false };
     case "injury":
-      return roll < e.chancePerRung ? { mod: 0, fired: true, injury: true } : { mod: 0, fired: false, injury: false };
+      return roll < e.chancePerRung * (legacy ? 1 : clamp(1.35 - durability / 115, 0.35, 1))
+        ? { mod: 0, fired: true, injury: true }
+        : { mod: 0, fired: false, injury: false };
     case "vsQuick":
       return quick ? { mod: -e.amount, fired: true, injury: false } : { mod: 0, fired: false, injury: false };
     case "vsCrafty":
@@ -180,13 +211,13 @@ const fill = (t: string, opp: string, ps?: number, os?: number) =>
 
 const pickAt = <T,>(arr: readonly T[], roll: number): T => arr[Math.min(arr.length - 1, Math.floor(roll * arr.length))];
 
-export function runGauntlet(derived: Derived, flaw: Flaw, simSeed: number): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
+export function runGauntlet(derived: Derived, flaw: Flaw, simSeed: number, gauntlet: Rung[], legacy = false): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
   const rng: Rng = mulberry32(simSeed);
   const rungs: RungResult[] = [];
   let fellAt: number | null = null;
   let injured = false;
 
-  for (const opp of GAUNTLET) {
+  for (const opp of gauntlet) {
     // Fixed per-rung draw order — determinism depends on this.
     const variance = rng() * 6 - 3;
     const flawRoll = rng();
@@ -195,7 +226,7 @@ export function runGauntlet(derived: Derived, flaw: Flaw, simSeed: number): { ru
     const quipRoll = rng();
     const beatRoll = rng();
 
-    const tick = flawTick(flaw, opp.rung, flawRoll, !!opp.quick, !!opp.crafty);
+    const tick = flawTick(flaw, opp.rung, flawRoll, !!opp.quick, !!opp.crafty, derived.durability, legacy);
 
     if (tick.injury) {
       const ps = 3 + Math.floor(scoreNoise * 6);
@@ -215,7 +246,8 @@ export function runGauntlet(derived: Derived, flaw: Flaw, simSeed: number): { ru
       break;
     }
 
-    const diff = derived.playerPower - opp.power + tick.mod + variance;
+    const fatigue = opp.rung >= 6 ? derived.fatigueMod * (opp.rung - 5) : 0;
+    const diff = derived.playerPower - opp.power + tick.mod + fatigue + variance;
     const p = 1 / (1 + Math.exp(-diff / 6));
     const win = winRoll < p;
 
@@ -269,8 +301,9 @@ export function bandFor(fellAt: number | null): ResultBand {
 
 export function entriesFor(build: BuildCode): PoolEntry[] | null {
   const entries: PoolEntry[] = [];
-  for (let i = 0; i < SLOTS.length; i++) {
-    const e = POOL[SLOTS[i]][build.picks[i]];
+  const slots = build.v === 1 ? LEGACY_SLOTS : SLOTS;
+  for (let i = 0; i < slots.length; i++) {
+    const e = POOL[slots[i]][build.picks[i]];
     if (!e) return null;
     entries.push(e);
   }
@@ -278,11 +311,19 @@ export function entriesFor(build: BuildCode): PoolEntry[] | null {
 }
 
 export function validateBuild(build: BuildCode): boolean {
-  if (build.picks.length !== SLOTS.length) return false;
+  if (build.v !== 1 && build.v !== 2) return false;
+  const slots = build.v === 1 ? LEGACY_SLOTS : SLOTS;
+  if (build.picks.length !== slots.length) return false;
   const entries = entriesFor(build);
   if (!entries) return false;
-  if (entries.reduce((a, e) => a + e.price, 0) > BUDGET) return false;
-  if (build.flaw < 0 || build.flaw >= FLAWS.length) return false;
+  if (build.flaw < 0 || build.flaw >= (build.v === 1 ? 10 : FLAWS.length)) return false;
+  const budget = build.v === 1 ? LEGACY_BUDGET : BUDGET + FLAWS[build.flaw].refund;
+  if (entries.reduce((a, e) => a + e.price, 0) > budget) return false;
+  if (build.v === 2) {
+    const position = build.position ?? "ALL";
+    if (position !== "ALL" && !POSITIONS.includes(position)) return false;
+    if (position !== "ALL" && entries.some((entry) => !entry.positions.includes(position))) return false;
+  }
   return true;
 }
 
@@ -292,7 +333,8 @@ export function simSeedFor(build: BuildCode): number {
   const ids = entries.map((e) => e.id).join(".");
   const flawId = FLAWS[build.flaw].id;
   const dailyKey = build.mode === "daily" ? `d${build.daily}` : "";
-  return fnv1a(`${ids}#${flawId}#${build.mode}#${dailyKey}#${build.attempt}`);
+  const positionKey = build.v === 2 ? `#${build.position ?? "ALL"}` : "";
+  return fnv1a(`${ids}#${flawId}#${build.mode}#${dailyKey}${positionKey}#${build.attempt}`);
 }
 
 function pickRoast(simSeed: number, archetypeId: string, band: ResultBand, flawId: string, flawDecisive: boolean): string {
@@ -308,13 +350,14 @@ export function simulate(build: BuildCode): SimResult | null {
   if (!validateBuild(build)) return null;
   const entries = entriesFor(build)!;
   const flaw = FLAWS[build.flaw];
-  const derived = deriveBuild(entries);
+  const derived = deriveBuild(entries, build.position ?? "ALL");
   const simSeed = simSeedFor(build);
-  const { rungs, fellAt, injured } = runGauntlet(derived, flaw, simSeed);
+  const gauntlet = gauntletFor(build.position, build.v);
+  const { rungs, fellAt, injured } = runGauntlet(derived, flaw, simSeed, gauntlet, build.v === 1);
   const band = bandFor(fellAt);
-  const archetype = assignArchetype(derived);
+  const archetype = assignArchetype(derived, build.v === 1 ? undefined : flaw);
   const last = rungs[rungs.length - 1];
   const flawDecisive = fellAt !== null && !!last && last.flawFired;
   const roast = pickRoast(simSeed, archetype.id, band, flaw.id, flawDecisive);
-  return { build, entries, flaw, derived, rungs, fellAt, injured, band, archetype, roast, simSeed };
+  return { build, entries, flaw, derived, rungs, fellAt, injured, band, archetype, roast, simSeed, gauntlet };
 }

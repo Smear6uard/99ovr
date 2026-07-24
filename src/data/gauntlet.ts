@@ -1,4 +1,5 @@
 import type { Rung } from "@/lib/types";
+import type { Position, PositionMode } from "@/lib/types";
 
 /**
  * The 10-rung 1v1 gauntlet. First to 11, first loss ends the run.
@@ -57,3 +58,85 @@ export const GAUNTLET: Rung[] = [
     lossQuips: ["He took it personally. It showed.", "The shrug. The tongue. The inevitable."],
   },
 ];
+
+const boss = (
+  rung: number,
+  id: string,
+  name: string,
+  title: string,
+  power: number,
+  quick = false,
+  crafty = false
+): Rung => ({
+  rung, id, name, shortName: name.split(" ").at(-1) ?? name, title, power, quick, crafty,
+  winQuips: [`Round ${rung} boss handled. Next legend up.`, `${name} had answers. You had one more.`],
+  lossQuips: [`${name} closed the gym on you.`, `Round ${rung} belonged to ${name}.`],
+});
+
+export const POSITION_GAUNTLETS: Record<Position, Rung[]> = {
+  PG: [
+    boss(1, "pg-mark", "Mark Jackson", "The Floor General", 62, false, true),
+    boss(2, "pg-lowry", "Kyle Lowry", "The Bulldog", 66, false, true),
+    boss(3, "pg-parker", "Tony Parker", "The Blur", 70, true, true),
+    boss(4, "pg-payton", "Gary Payton", "The Glove", 74, true),
+    boss(5, "pg-kidd", "Jason Kidd", "The Triple-Double", 78, false, true),
+    boss(6, "pg-nash", "Steve Nash", "The Conductor", 82, true, true),
+    boss(7, "pg-cp3", "Chris Paul", "Point God", 85, false, true),
+    boss(8, "pg-isiah", "Isiah Thomas", "The Assassin", 90, true, true),
+    boss(9, "pg-curry", "Stephen Curry", "The Revolution", 95, true, true),
+    boss(10, "pg-magic", "Magic Johnson", "Showtime", 99, true, true),
+  ],
+  SG: [
+    boss(1, "sg-crawford", "Jamal Crawford", "The Shake", 62, true),
+    boss(2, "sg-manu", "Manu Ginóbili", "The Lefty", 66, false, true),
+    boss(3, "sg-klay", "Klay Thompson", "The Heater", 70),
+    boss(4, "sg-reggie", "Reggie Miller", "The Provocateur", 74, true),
+    boss(5, "sg-ray", "Ray Allen", "The Assassin", 78),
+    boss(6, "sg-iverson", "Allen Iverson", "The Answer", 82, true),
+    boss(7, "sg-wade", "Dwyane Wade", "Flash", 85, true, true),
+    boss(8, "sg-harden", "James Harden", "The Beard", 90, false, true),
+    boss(9, "sg-kobe", "Kobe Bryant", "The Mamba", 95, true, true),
+    boss(10, "sg-jordan", "Michael Jordan", "His Airness", 99, true, true),
+  ],
+  SF: [
+    boss(1, "sf-ariza", "Trevor Ariza", "The Long Arm", 62),
+    boss(2, "sf-iggy", "Andre Iguodala", "The Swiss Army Knife", 66, false, true),
+    boss(3, "sf-mullin", "Chris Mullin", "The Lefty", 70),
+    boss(4, "sf-tmac", "Tracy McGrady", "The Problem", 74, true),
+    boss(5, "sf-pippen", "Scottie Pippen", "The Blueprint", 78, true, true),
+    boss(6, "sf-kawhi", "Kawhi Leonard", "The Claw", 82, false, true),
+    boss(7, "sf-drj", "Julius Erving", "Doctor J", 85, true),
+    boss(8, "sf-durant", "Kevin Durant", "The Slim Reaper", 90, false, true),
+    boss(9, "sf-bird", "Larry Bird", "Larry Legend", 95, false, true),
+    boss(10, "sf-lebron", "LeBron James", "The King", 99, true, true),
+  ],
+  PF: [
+    boss(1, "pf-oakley", "Charles Oakley", "The Enforcer", 62),
+    boss(2, "pf-griffin", "Blake Griffin", "The Detonator", 66, true),
+    boss(3, "pf-webber", "Chris Webber", "The Technician", 70, false, true),
+    boss(4, "pf-gasol", "Pau Gasol", "The Craftsman", 74, false, true),
+    boss(5, "pf-barkley", "Charles Barkley", "The Round Mound", 78, true),
+    boss(6, "pf-dirk", "Dirk Nowitzki", "The Fadeaway", 82, false, true),
+    boss(7, "pf-kg", "Kevin Garnett", "The Big Ticket", 85, true),
+    boss(8, "pf-malone", "Karl Malone", "The Mailman", 90),
+    boss(9, "pf-giannis", "Giannis Antetokounmpo", "The Greek Freak", 95, true),
+    boss(10, "pf-duncan", "Tim Duncan", "The Big Fundamental", 99, false, true),
+  ],
+  C: [
+    boss(1, "c-boban", "Boban Marjanović", "The Friendly Giant", 62),
+    boss(2, "c-sabonis", "Arvydas Sabonis", "The Maestro", 66, false, true),
+    boss(3, "c-mutombo", "Dikembe Mutombo", "Mount Mutombo", 70),
+    boss(4, "c-embiid", "Joel Embiid", "The Process", 74, false, true),
+    boss(5, "c-robinson", "David Robinson", "The Admiral", 78, true),
+    boss(6, "c-jokic", "Nikola Jokić", "The Joker", 82, false, true),
+    boss(7, "c-russell", "Bill Russell", "The Winner", 85, true),
+    boss(8, "c-hakeem", "Hakeem Olajuwon", "The Dream", 90, false, true),
+    boss(9, "c-kareem", "Kareem Abdul-Jabbar", "The Captain", 95, false, true),
+    boss(10, "c-shaq", "Shaquille O'Neal", "The Diesel", 99, true),
+  ],
+};
+
+export function gauntletFor(position: PositionMode | undefined, version = 2): Rung[] {
+  if (version === 1 || !position || position === "ALL") return GAUNTLET;
+  return POSITION_GAUNTLETS[position];
+}

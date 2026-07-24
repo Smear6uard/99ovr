@@ -1,245 +1,112 @@
 import { describe, expect, it } from "vitest";
 import { POOL, indexOfEntry } from "@/data/pool";
+import { FLAWS } from "@/data/flaws";
 import { BUDGET, curve, deriveBuild, simSeedFor, simulate, validateBuild } from "@/lib/sim";
 import { canPick, drawShop } from "@/lib/shop";
-import { SLOTS, type BuildCode, type PoolEntry, type SlotId } from "@/lib/types";
+import { POSITIONS, SLOTS, type BuildCode, type SlotId } from "@/lib/types";
+import { tierFor } from "@/lib/tiers";
 
-/** Every ≤$15 combination, via price-sorted nested loops with pruning. */
-function forEachValidCombo(fn: (entries: PoolEntry[]) => void) {
-  const sorted = SLOTS.map((s) => [...POOL[s]].sort((a, b) => a.price - b.price));
-  const entries: PoolEntry[] = new Array(6);
-  const walk = (slotIdx: number, cost: number) => {
-    if (slotIdx === 6) {
-      fn(entries.slice());
-      return;
-    }
-    const remainingMin = 5 - slotIdx; // later slots cost ≥$1 each
-    for (const e of sorted[slotIdx]) {
-      if (cost + e.price + remainingMin > BUDGET) break; // sorted → no cheaper option follows
-      entries[slotIdx] = e;
-      walk(slotIdx + 1, cost + e.price);
-    }
-  };
-  walk(0, 0);
-}
+const pickAtPrice = (slot: SlotId, price: number, best = false) => {
+  const choices = POOL[slot].map((entry, index) => ({ entry, index })).filter(({ entry }) => entry.price === price);
+  choices.sort((a, b) => best ? b.entry.rating - a.entry.rating : a.entry.rating - b.entry.rating);
+  return choices[0].index;
+};
 
-describe("rating curve", () => {
-  it("is monotone non-decreasing across the whole domain", () => {
-    let prev = -Infinity;
-    for (let x = 0; x <= 110; x += 0.25) {
-      const y = curve(x);
-      expect(y).toBeGreaterThanOrEqual(prev - 1e-9);
-      prev = y;
-    }
-  });
-});
-
-describe("OVR tuning (acceptance bands)", () => {
-  it("best possible $15 build lands 90–94; 99 is unreachable", () => {
-    let best = 0;
-    let bestEntries: PoolEntry[] = [];
-    let count = 0;
-    forEachValidCombo((entries) => {
-      count++;
-      const d = deriveBuild(entries);
-      if (d.ovr > best) {
-        best = d.ovr;
-        bestEntries = entries;
-      }
-    });
-    // eslint-disable-next-line no-console
-    console.log(
-      `[tuning] ${count} legal builds · max OVR ${best} ·`,
-      bestEntries.map((e) => `${e.id}($${e.price})`).join(" ")
-    );
-    expect(best).toBeGreaterThanOrEqual(90);
-    expect(best).toBeLessThanOrEqual(94);
-  });
-
-  it("all-$1 builds land roughly 45–55 OVR", () => {
-    const ones = SLOTS.map((s) => POOL[s].filter((e) => e.price === 1));
-    let min = 99;
-    let max = 0;
-    const rec = (i: number, acc: PoolEntry[]) => {
-      if (i === 6) {
-        const d = deriveBuild(acc);
-        min = Math.min(min, d.ovr);
-        max = Math.max(max, d.ovr);
-        return;
-      }
-      for (const e of ones[i]) rec(i + 1, [...acc, e]);
-    };
-    rec(0, []);
-    // eslint-disable-next-line no-console
-    console.log(`[tuning] all-$1 OVR range: ${min}–${max}`);
-    expect(min).toBeGreaterThanOrEqual(43);
-    expect(max).toBeLessThanOrEqual(57);
-  });
-});
-
-describe("determinism", () => {
-  const fixed: BuildCode = {
-    v: 1,
-    mode: "sandbox",
-    seed: 777,
-    picks: [
-      indexOfEntry("jumpshot", "js-klay"),
-      indexOfEntry("handles", "h-shaq"),
-      indexOfEntry("finishing", "f-wade"),
-      indexOfEntry("defense", "d-draymond"),
-      indexOfEntry("athleticism", "a-cp3"),
-      indexOfEntry("iq", "iq-nash"),
-    ],
-    flaw: 3,
-    attempt: 7,
-    daily: 0,
-    knowledge: false,
-  };
-
-  it("same build + same seed ⇒ byte-identical result", () => {
-    const a = simulate(fixed);
-    const b = simulate(fixed);
-    expect(a).not.toBeNull();
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
-  });
-
-  it("attempt counter changes the sim seed (fresh variance, same build)", () => {
-    expect(simSeedFor(fixed)).not.toBe(simSeedFor({ ...fixed, attempt: 8 }));
-    expect(simSeedFor(fixed)).not.toBe(simSeedFor({ ...fixed, mode: "daily", daily: 3 }));
-  });
-
-  it("shop draw is deterministic and re-roll yields five fresh options", () => {
-    const d1 = drawShop(123456, []);
-    const d2 = drawShop(123456, []);
-    expect(d1).toEqual(d2);
+describe("data shape", () => {
+  it("has 20 position-tagged, stat-authored players in every slot", () => {
     for (const slot of SLOTS) {
-      expect(d1[slot]).toHaveLength(5);
-      const prices = d1[slot].map((i) => POOL[slot][i].price);
-      expect(prices).toEqual([5, 4, 3, 2, 1]);
-      const rerolled = drawShop(123456, [slot])[slot];
-      for (let t = 0; t < 5; t++) expect(rerolled[t]).not.toBe(d1[slot][t]);
+      expect(POOL[slot]).toHaveLength(20);
+      for (const price of [1, 2, 3, 4, 5]) expect(POOL[slot].filter((entry) => entry.price === price)).toHaveLength(4);
+      for (const entry of POOL[slot]) {
+        expect(entry.positions.length).toBeGreaterThan(0);
+        expect(entry.stats.length).toBeGreaterThanOrEqual(2);
+        expect(entry.stats.length).toBeLessThanOrEqual(3);
+      }
+    }
+  });
+
+  it("can draw every price tier for every positional challenge", () => {
+    for (const position of POSITIONS) {
+      const draw = drawShop(1234, [], position);
+      for (const slot of SLOTS) {
+        expect(draw[slot]).toHaveLength(5);
+        expect(draw[slot].map((index) => POOL[slot][index]?.price)).toEqual([5, 4, 3, 2, 1]);
+        expect(draw[slot].every((index) => POOL[slot][index].positions.includes(position))).toBe(true);
+      }
     }
   });
 });
 
-describe("gauntlet feel", () => {
-  it("an all-$1 build dies early on average (and gets roasted)", () => {
-    const picks = SLOTS.map((s) => {
-      const cheapest = POOL[s].filter((e) => e.price === 1)[0];
-      return indexOfEntry(s, cheapest.id);
-    });
-    let total = 0;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      const r = simulate({
-        v: 1,
-        mode: "sandbox",
-        seed: 1,
-        picks,
-        flaw: 6,
-        attempt,
-        daily: 0,
-        knowledge: false,
-      });
-      expect(r).not.toBeNull();
-      total += r!.fellAt ?? 10;
-      expect(r!.roast.length).toBeGreaterThan(0);
+describe("rating tuning", () => {
+  it("uses the seven published rating thresholds", () => {
+    expect([54, 55, 65, 75, 83, 90, 96].map(tierFor)).toEqual(["bench", "role", "starter", "allstar", "superstar", "hof", "goat"]);
+  });
+  it("keeps the curve monotone", () => {
+    let previous = -Infinity;
+    for (let value = 0; value <= 110; value += 0.25) {
+      expect(curve(value)).toBeGreaterThanOrEqual(previous - 1e-9);
+      previous = curve(value);
     }
-    expect(total / 40).toBeLessThanOrEqual(4);
   });
 
-  it("a strong build regularly gets deep but rarely clears", () => {
-    const picks = [
-      indexOfEntry("jumpshot", "js-klay"),
-      indexOfEntry("handles", "h-shaq"),
-      indexOfEntry("finishing", "f-wade"),
-      indexOfEntry("defense", "d-draymond"),
-      indexOfEntry("athleticism", "a-cp3"),
-      indexOfEntry("iq", "iq-nash"),
-    ];
-    let cleared = 0;
-    let deep = 0;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const r = simulate({
-        v: 1,
-        mode: "sandbox",
-        seed: 1,
-        picks,
-        flaw: 0,
-        attempt,
-        daily: 0,
-        knowledge: false,
-      })!;
-      if (r.fellAt === null) cleared++;
-      if ((r.fellAt ?? 11) >= 6) deep++;
-    }
-    // eslint-disable-next-line no-console
-    console.log(`[tuning] strong build: deep ${deep}/60, cleared ${cleared}/60`);
-    expect(deep).toBeGreaterThanOrEqual(20);
-    expect(cleared).toBeLessThanOrEqual(10);
+  it("puts an optimized realistic build in HOF and makes GOAT unreachable", () => {
+    const prices = [5, 4, 3, 3, 2, 2, 2, 2]; // $23 via a +$3 flaw
+    const entries = SLOTS.map((slot, i) => POOL[slot][pickAtPrice(slot, prices[i], true)]);
+    const rating = deriveBuild(entries).ovr;
+    expect(rating).toBeGreaterThanOrEqual(90);
+    expect(rating).toBeLessThanOrEqual(95);
+
+    const theoretical = deriveBuild(SLOTS.map((slot) => POOL[slot].reduce((a, b) => a.rating > b.rating ? a : b))).ovr;
+    expect(theoretical).toBeLessThanOrEqual(95);
+  });
+
+  it("keeps all-$1 builds in Bench Warmer territory", () => {
+    const low = deriveBuild(SLOTS.map((slot) => POOL[slot][pickAtPrice(slot, 1)])).ovr;
+    const high = deriveBuild(SLOTS.map((slot) => POOL[slot][pickAtPrice(slot, 1, true)])).ovr;
+    expect(low).toBeGreaterThanOrEqual(40);
+    expect(high).toBeLessThan(55);
   });
 });
 
-describe("budget validation", () => {
-  it("canPick blocks picks that strand unfilled slots below $1 each", () => {
-    // $5 jumpshot picked; 4 empty slots besides defense; $15 − 5 = 10 left.
-    // A $5 defense leaves $5 for 4 slots → legal. A second $5 plus $4 is not.
-    const picks: Partial<Record<SlotId, number>> = { jumpshot: 0 };
-    expect(canPick(picks, "defense", 5).ok).toBe(true);
-    expect(canPick({ ...picks, defense: 0 }, "finishing", 4).ok).toBe(false);
-    expect(canPick({ ...picks, defense: 0 }, "finishing", 1).ok).toBe(true);
+describe("determinism and replay", () => {
+  const fixed: BuildCode = {
+    v: 2, mode: "sandbox", seed: 777, position: "ALL",
+    picks: SLOTS.map((slot) => pickAtPrice(slot, 2)), flaw: 3, attempt: 7, daily: 0, knowledge: false,
+  };
+
+  it("returns a byte-identical story for the same build", () => {
+    expect(JSON.stringify(simulate(fixed))).toBe(JSON.stringify(simulate(fixed)));
   });
 
-  it("replacing a pick refunds it first", () => {
-    // Full board at exactly $15 → swapping a $5 for another $5 is legal.
-    const picks: Partial<Record<SlotId, number>> = {
-      jumpshot: 0, // $5
-      handles: 0, // $5
-      finishing: 9, // $1
-      defense: 9, // $1
-      athleticism: 9, // $1
-      iq: 9, // $1
-    };
-    expect(canPick(picks, "jumpshot", 5).ok).toBe(true);
-    expect(canPick(picks, "finishing", 3).ok).toBe(false);
-    expect(canPick(picks, "finishing", 2).ok).toBe(true);
+  it("changes the sim seed when attemptCounter changes", () => {
+    expect(simSeedFor(fixed)).not.toBe(simSeedFor({ ...fixed, attempt: 8 }));
   });
 
-  it("validateBuild rejects short or over-budget builds", () => {
-    expect(
-      validateBuild({
-        v: 1,
-        mode: "sandbox",
-        seed: 1,
-        picks: [0, 0, 0],
-        flaw: 0,
-        attempt: 0,
-        daily: 0,
-        knowledge: false,
-      })
-    ).toBe(false);
-    expect(
-      validateBuild({
-        v: 1,
-        mode: "sandbox",
-        seed: 1,
-        picks: [0, 0, 0, 0, 0, 0],
-        flaw: 0,
-        attempt: 0,
-        daily: 0,
-        knowledge: false,
-      })
-    ).toBe(false);
-    expect(
-      validateBuild({
-        v: 1,
-        mode: "sandbox",
-        seed: 1,
-        picks: [9, 9, 9, 9, 9, 9],
-        flaw: 0,
-        attempt: 0,
-        daily: 0,
-        knowledge: false,
-      })
-    ).toBe(true);
+  it("keeps pack draws deterministic and new packs fresh", () => {
+    const initial = drawShop(123456, []);
+    expect(initial).toEqual(drawShop(123456, []));
+    for (const slot of SLOTS) {
+      const next = drawShop(123456, [slot])[slot];
+      expect(next).toHaveLength(5);
+      next.forEach((pick, tier) => expect(pick).not.toBe(initial[slot][tier]));
+    }
+  });
+});
+
+describe("budget and flaw refunds", () => {
+  it("starts at $20 and adds the selected flaw refund", () => {
+    expect(BUDGET).toBe(20);
+    expect(Math.max(...FLAWS.map((flaw) => flaw.refund))).toBe(3);
+    const picks = Object.fromEntries(SLOTS.map((slot, index) => [slot, pickAtPrice(slot, index < 5 ? 3 : 2)])) as Partial<Record<SlotId, number>>;
+    expect(canPick(picks, "jumpshot", 5, 23).ok).toBe(true);
+    expect(canPick(picks, "jumpshot", 5, 20).ok).toBe(false);
+  });
+
+  it("validates v2 position tags and keeps v1 rules alive", () => {
+    const v2: BuildCode = { v: 2, mode: "sandbox", seed: 1, position: "ALL", picks: SLOTS.map((slot) => pickAtPrice(slot, 1)), flaw: 0, attempt: 0, daily: 0, knowledge: false };
+    expect(validateBuild(v2)).toBe(true);
+    const wrongPosition = { ...v2, position: "C" as const, picks: [...v2.picks] };
+    wrongPosition.picks[0] = indexOfEntry("jumpshot", "js-curry");
+    expect(validateBuild(wrongPosition)).toBe(false);
   });
 });

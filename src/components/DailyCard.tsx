@@ -50,6 +50,7 @@ export function DailyCard() {
       <h2 className="mt-2.5 font-display text-4xl uppercase leading-none text-paper">
         Daily <span className="text-gold">#{ready ? number : "—"}</span>
       </h2>
+      <p className="mt-2 text-[13px] leading-snug text-dim">Same packs for everyone. One official run before midnight UTC.</p>
 
       <div className="mt-3 flex items-center gap-5 text-[11px] font-bold uppercase tracking-[0.16em] text-dim">
         <span>

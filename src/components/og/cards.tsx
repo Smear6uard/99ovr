@@ -2,9 +2,8 @@
  * JSX for the edge-rendered share images (satori). Inline styles only,
  * explicit display:flex on every multi-child container — satori rules.
  */
-import { GAUNTLET } from "@/data/gauntlet";
 import { TIER_HEX, TIER_NAMES, tierFor, tierForPrice } from "@/lib/tiers";
-import type { SimResult } from "@/lib/types";
+import { POSITION_LABELS, type SimResult } from "@/lib/types";
 
 const INK = "#0b1220";
 const PANEL = "#111a2e";
@@ -22,6 +21,8 @@ const SLOT_ABBR: Record<string, string> = {
   defense: "DEFENSE",
   athleticism: "ATHLETICISM",
   iq: "IQ",
+  passing: "PASSING",
+  durability: "DURABILITY",
 };
 
 /**
@@ -95,9 +96,9 @@ function PickRow({ result, scale = 1 }: { result: SimResult; scale?: number }) {
 
 function gauntletLine(result: SimResult): { text: string; color: string } {
   if (result.fellAt === null) return { text: "CLEARED THE GAUNTLET", color: WIN };
-  const opp = GAUNTLET[result.fellAt - 1];
+  const opp = result.gauntlet[result.fellAt - 1];
   return {
-    text: `${result.injured ? "INJURED" : "FELL"} AT RUNG ${result.fellAt} · ${opp.title.toUpperCase()}`,
+    text: `${result.injured ? "INJURED" : "LOST"} · ROUND ${result.fellAt} BOSS: ${opp.shortName.toUpperCase()}`,
     color: LOSS,
   };
 }
@@ -127,6 +128,7 @@ export function OgLandscape({ result }: { result: SimResult }) {
   const tier = tierFor(derived.ovr);
   const hex = TIER_HEX[tier];
   const gl = gauntletLine(result);
+  const position = build.position && build.position !== "ALL" ? ` ${POSITION_LABELS[build.position]}` : "";
   return (
     <div
       style={{
@@ -195,8 +197,8 @@ export function OgLandscape({ result }: { result: SimResult }) {
               {derived.ovr}
             </span>
             <div style={{ display: "flex", flexDirection: "column", paddingBottom: 52 }}>
-              <span style={{ fontFamily: "Anton", fontSize: 32, color: hex, letterSpacing: 6 }}>OVR</span>
-              <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 17, color: DIM, letterSpacing: 4 }}>
+              <span style={{ fontFamily: "Anton", fontSize: 32, color: hex, letterSpacing: 6 }}>OVR{position}</span>
+              <span style={{ fontFamily: "Anton", fontSize: 34, color: hex, letterSpacing: 3 }}>
                 {TIER_NAMES[tier].toUpperCase()}
               </span>
             </div>
@@ -280,6 +282,7 @@ export function OgPortrait({ result }: { result: SimResult }) {
   const tier = tierFor(derived.ovr);
   const hex = TIER_HEX[tier];
   const gl = gauntletLine(result);
+  const position = build.position && build.position !== "ALL" ? ` ${POSITION_LABELS[build.position]}` : "";
   return (
     <div
       style={{
@@ -346,9 +349,9 @@ export function OgPortrait({ result }: { result: SimResult }) {
         <span style={{ fontFamily: "Anton", fontSize: 380, color: hex, lineHeight: 1, position: "relative" }}>
           {derived.ovr}
         </span>
-        <div style={{ display: "flex", gap: 14, alignItems: "center", position: "relative", marginTop: 34 }}>
-          <span style={{ fontFamily: "Anton", fontSize: 30, color: hex, letterSpacing: 8 }}>OVR</span>
-          <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 20, color: DIM, letterSpacing: 5 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", marginTop: 20 }}>
+          <span style={{ fontFamily: "Anton", fontSize: 30, color: PAPER, letterSpacing: 8 }}>OVR{position}</span>
+          <span style={{ fontFamily: "Anton", fontSize: 58, color: hex, letterSpacing: 5 }}>
             {TIER_NAMES[tier].toUpperCase()}
           </span>
         </div>
@@ -452,7 +455,7 @@ export function OgHero() {
             position: "relative",
           }}
         >
-          BUILD THE PERFECT NBA PLAYER WITH $15
+          PICK A FLAW. RIP EIGHT PACKS. BEAT TEN BOSSES.
         </span>
         <div style={{ display: "flex", gap: 12, marginTop: 18, position: "relative" }}>
           {([1, 2, 3, 4, 5] as const).map((p) => (
@@ -486,7 +489,7 @@ export function OgHero() {
             position: "relative",
           }}
         >
-          SIX SKILLS · ONE FATAL FLAW · TEN LEGENDS
+          $20 BASE · FLAW REFUNDS · POSITION CHALLENGES
         </span>
       </div>
     </div>

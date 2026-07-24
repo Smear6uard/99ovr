@@ -110,6 +110,21 @@ body {
   animation: dealIn 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
+@keyframes packRip {
+  0% { transform: rotate(0) scale(1); }
+  35% { transform: rotate(-4deg) scale(1.04); }
+  70% { transform: rotate(5deg) scale(0.98); filter: brightness(1.8); }
+  100% { transform: rotate(0) scale(1); opacity: 0; }
+}
+.pack-shell.is-ripping { animation: packRip 0.48s cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes packCard {
+  0% { opacity: 0; transform: rotateY(90deg) translateY(12px); box-shadow: 0 0 0 var(--tier); }
+  58% { opacity: 1; transform: rotateY(0) translateY(0); box-shadow: 0 0 30px var(--tier); }
+  100% { opacity: 1; transform: none; box-shadow: none; }
+}
+.pack-card { animation: packCard .42s cubic-bezier(.2,.8,.2,1) both; perspective: 800px; }
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

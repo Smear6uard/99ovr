@@ -14,7 +14,7 @@ function officialBuild(): BuildCode {
   // one per tier is shown $5→$1; take the $2 pick for slot 0 and $1s elsewhere → $7 total
   const picks = SLOTS.map((s, i) => draw[s][i === 0 ? 3 : 4]);
   return {
-    v: 1,
+    v: 2,
     mode: "daily",
     seed,
     picks,
@@ -22,6 +22,7 @@ function officialBuild(): BuildCode {
     attempt: 0,
     daily: dailyNumberFor(DATE),
     knowledge: false,
+    position: "ALL",
   };
 }
 
@@ -89,8 +90,9 @@ describe("emoji block with percentile", () => {
     const withPct = formatDailyBlock(result, 14, 9);
     expect(withPct.split("\n")).toEqual([
       "99OVR Daily #14",
-      "🏀 87 OVR · Two-Way Demon",
-      "🪜 Fell at Rung 9 (LeBron)",
+      "🏀 87 OVR · Superstar",
+      "🧬 Two-Way Demon",
+      "🏀 Round 9 Boss: LeBron",
       "🟩🟩🟩🟩🟩🟩🟩🟩🟥⬛",
       "📊 Top 9% today",
       "99ovr.app/daily",

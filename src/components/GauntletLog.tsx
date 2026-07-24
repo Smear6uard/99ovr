@@ -1,18 +1,18 @@
 "use client";
 
-import { GAUNTLET } from "@/data/gauntlet";
 import type { SimResult } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
 
-/** Rung-by-rung story. Reads like a box score with a narrator. */
+/** Round-by-round story. Reads like a box score with a narrator. */
 export function GauntletLog({ result, refreshKey }: { result: SimResult; refreshKey?: number }) {
   const rows = result.rungs;
   return (
     <section aria-label="Gauntlet log" className="mt-6">
       <h2 className="font-display text-lg uppercase tracking-wide text-paper">The Gauntlet</h2>
+      <p className="mt-1 text-[11px] text-dim">Beat 10 legends 1v1. Lose once and it&apos;s over.</p>
       <ol className="mt-2 space-y-0">
         {rows.map((r, i) => {
-          const opp = GAUNTLET[r.rung - 1];
+          const opp = result.gauntlet[r.rung - 1];
           return (
             <li key={r.rung}>
               {i === 5 ? <AdSlot id="gauntlet-log" refreshKey={refreshKey} /> : null}
@@ -21,7 +21,7 @@ export function GauntletLog({ result, refreshKey }: { result: SimResult; refresh
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[13px] font-semibold">
-                      {opp.name} <span className="text-dim">· {opp.title}</span>
+                      Round {r.rung} Boss: {opp.name} <span className="text-dim">· {opp.title}</span>
                     </span>
                     <span
                       className="shrink-0 font-display text-[15px] tracking-wide"
@@ -45,11 +45,11 @@ export function GauntletLog({ result, refreshKey }: { result: SimResult; refresh
         })}
         {result.fellAt === null ? (
           <li className="py-3 text-center font-display text-base uppercase tracking-wide text-win">
-            All ten rungs. Nothing left to climb.
+            Ten bosses down. Nothing left to prove.
           </li>
         ) : result.rungs.length < 10 ? (
           <li className="py-3 text-center text-[11px] tracking-[0.2em] text-dim">
-            {10 - result.rungs.length} RUNG{10 - result.rungs.length === 1 ? "" : "S"} NEVER REACHED
+            {10 - result.rungs.length} ROUND{10 - result.rungs.length === 1 ? "" : "S"} NEVER REACHED
           </li>
         ) : null}
       </ol>

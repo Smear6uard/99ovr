@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { GAUNTLET } from "@/data/gauntlet";
 import { usePrefersReducedMotion } from "@/lib/hooks";
 import { TIER_HEX, TIER_NAMES, tierFor, tierForPrice } from "@/lib/tiers";
-import { SLOT_LABELS, type SimResult } from "@/lib/types";
+import { POSITION_LABELS, SLOT_LABELS, type SimResult } from "@/lib/types";
 import { Odometer } from "@/components/Odometer";
 import { RungSquares } from "@/components/RungSquares";
 
@@ -15,6 +14,8 @@ const SLOT_ABBR: Record<string, string> = {
   defense: "DEF",
   athleticism: "ATH",
   iq: "IQ",
+  passing: "PAS",
+  durability: "DUR",
 };
 
 function StatCol({ label, value }: { label: string; value: number }) {
@@ -63,9 +64,10 @@ export function ResultCard({
   const finalTier = tierFor(derived.ovr);
   const gauntletLine = useMemo(() => {
     if (fellAt === null) return "CLEARED THE GAUNTLET";
-    const opp = GAUNTLET[fellAt - 1];
-    return `${injured ? "INJURED" : "FELL"} AT RUNG ${fellAt} · ${opp.title.toUpperCase()}`;
-  }, [fellAt, injured]);
+    const opp = result.gauntlet[fellAt - 1];
+    return `${injured ? "INJURED" : "LOST"} · ROUND ${fellAt} BOSS: ${opp.shortName.toUpperCase()}`;
+  }, [fellAt, injured, result.gauntlet]);
+  const positionName = build.position && build.position !== "ALL" ? POSITION_LABELS[build.position] : null;
 
   const beat = challenge ? derived.ovr > challenge.ovr : null;
   const lateReveal = stamped ? "fade-up" : "opacity-0";
@@ -75,7 +77,7 @@ export function ResultCard({
       className="relative overflow-hidden rounded-xl border-[3px] bg-panel px-5 pb-5 pt-4 transition-colors duration-200"
       style={{
         borderColor: hex,
-        boxShadow: stamped && finalTier === "violet" ? `0 0 42px ${hex}55` : undefined,
+        boxShadow: stamped && (finalTier === "hof" || finalTier === "goat") ? `0 0 42px ${hex}55` : undefined,
       }}
     >
       {/* faint in-card court arc */}
@@ -128,11 +130,8 @@ export function ResultCard({
             className="block text-[96px] leading-[1.02] transition-colors duration-200"
             style={{ color: hex }}
           />
-          <div className="-mt-1 flex items-center justify-center gap-2 text-[11px] font-semibold tracking-[0.3em]" style={{ color: hex }}>
-            <span>OVR</span>
-            <span className="text-dim">·</span>
-            <span>{TIER_NAMES[tier].toUpperCase()}</span>
-          </div>
+          <div className="-mt-1 font-display text-3xl uppercase tracking-wide" style={{ color: hex }}>{TIER_NAMES[tier]}</div>
+          <div className="mt-1 text-[11px] font-semibold tracking-[0.25em] text-paper">{derived.ovr} OVR{positionName ? ` ${positionName}` : ""}</div>
         </div>
 
         {/* The stamp */}
@@ -169,10 +168,12 @@ export function ResultCard({
         </div>
 
         {/* Sub-ratings */}
-        <div className="mt-4 flex gap-4">
+        <div className={`mt-4 grid gap-2 ${build.v === 1 ? "grid-cols-3" : "grid-cols-5"}`}>
           <StatCol label="OFF" value={derived.offense} />
           <StatCol label="DEF" value={derived.defense} />
           <StatCol label="IQ" value={derived.iq} />
+          {build.v === 2 ? <StatCol label="PAS" value={derived.passing} /> : null}
+          {build.v === 2 ? <StatCol label="DUR" value={derived.durability} /> : null}
         </div>
 
         {/* Synergies */}
@@ -190,7 +191,7 @@ export function ResultCard({
           </div>
         ) : null}
 
-        {/* The six picks */}
+        {/* The eight picks */}
         <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2">
           {entries.map((e) => (
             <div key={e.id} className="flex items-center gap-2 text-[12px]">
@@ -212,6 +213,7 @@ export function ResultCard({
         <div className="mt-4 border-l-2 border-loss pl-3 text-[12px]">
           <span className="mr-2 text-[10px] font-bold tracking-[0.18em] text-loss">FLAW</span>
           <span className="font-semibold">{flaw.name}</span>
+          <span className="ml-2 font-bold text-gold">+${flaw.refund}</span>
         </div>
 
         {/* The roast */}
@@ -224,7 +226,7 @@ export function ResultCard({
 
         <div className="mt-5 flex items-end justify-between">
           <span className="text-[9px] tracking-[0.14em] text-dim">
-            ${derived.spend} SPENT · SEED {result.simSeed.toString(16).slice(0, 6).toUpperCase()}
+            ${derived.spend} / ${build.v === 1 ? 15 : 20 + flaw.refund} · SEED {result.simSeed.toString(16).slice(0, 6).toUpperCase()}
           </span>
           <span className="font-display text-sm tracking-wide text-gold">99OVR.APP</span>
         </div>

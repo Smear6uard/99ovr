@@ -1,8 +1,8 @@
 "use client";
 
 import { SITE_URL } from "@/config/site";
-import { GAUNTLET } from "@/data/gauntlet";
-import type { SimResult } from "@/lib/types";
+import { TIER_NAMES, tierFor } from "@/lib/tiers";
+import { POSITION_LABELS, type SimResult } from "@/lib/types";
 
 export function buildUrl(code: string): string {
   return `${SITE_URL}/b/${code}`;
@@ -15,15 +15,17 @@ export function resultText(result: SimResult, code: string): string {
     fellAt === null
       ? "🟩".repeat(10)
       : "🟩".repeat(fellAt - 1) + "🟥" + "⬛".repeat(10 - fellAt);
-  const ladderLine =
+  const roundLine =
     fellAt === null
-      ? "🪜 Cleared all 10 rungs"
-      : `🪜 Fell at Rung ${fellAt} (${GAUNTLET[fellAt - 1].shortName})`;
+      ? "🏆 Beat all 10 bosses"
+      : `🏀 Round ${fellAt} Boss: ${result.gauntlet[fellAt - 1].shortName}`;
+  const position = result.build.position && result.build.position !== "ALL" ? ` ${POSITION_LABELS[result.build.position]}` : "";
   const lines = [
-    `99OVR — ${derived.ovr} OVR · ${archetype.name}`,
+    `99OVR — ${derived.ovr} OVR${position} · ${TIER_NAMES[tierFor(derived.ovr)]}`,
+    archetype.name,
   ];
   if (result.build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
-  lines.push(ladderLine, squares, `Beat my build → ${buildUrl(code)}`);
+  lines.push(roundLine, squares, `Beat my build → ${buildUrl(code)}`);
   return lines.join("\n");
 }
 

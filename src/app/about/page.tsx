@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GAUNTLET } from "@/data/gauntlet";
+import { RATING_TIERS } from "@/config/ratingTiers";
 
 export const metadata: Metadata = {
   title: "How it works",
-  description: "The rules of 99OVR: $15, six skills, one fatal flaw, ten legends.",
+  description: "The rules of 99OVR: pick a flaw, build eight skills, then face ten bosses.",
   alternates: { canonical: "/about" },
 };
 
 const FAQ = [
   {
     q: "Why can't I hit 99 OVR?",
-    a: "Because you can't. 99 is a religion, not a rating. The best build the math allows tops out in the low 90s — if you find it, the group chat deserves to know.",
+    a: "Because you can't. GOAT (96–99) is the myth; the best legal builds top out in HOF. If you find the ceiling, the group chat deserves evidence.",
   },
   {
     q: "Same build, different results?",
@@ -26,8 +27,8 @@ const FAQ = [
     a: "File a complaint at the barbershop. (The prices are the debate — that's the game.)",
   },
   {
-    q: "What decides who wins a rung?",
-    a: "Your offense and defense vs the legend's power, your flaw's fine print, and a seeded variance roll of about ±3. First to 11. First loss ends the run.",
+    q: "What decides who wins a round?",
+    a: "Your offense, defense, passing, IQ, durability, position profile, flaw, and a seeded variance roll. Durability fights injuries and late-round fatigue. First to 11; first loss ends the run.",
   },
 ];
 
@@ -39,26 +40,41 @@ export default function AboutPage() {
       <section className="mt-5">
         <h2 className="font-display text-xl uppercase text-gold">The rules</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5 text-paper/90">
-          <li>You get <strong>$15</strong> to fill six skill slots: jumpshot, handles, finishing, defense, athleticism, IQ.</li>
-          <li>Each slot offers five players — one per price tier, $1 to $5 — drawn from a bigger pool. One re-spin per slot.</li>
+          <li>Spin the flaw wheel first and choose one of three. Mild refunds $0, Bad $1, Brutal $2, and Career-Threatening $3.</li>
+          <li>Your base budget is <strong>$20</strong>. The flaw refund is spendable immediately.</li>
+          <li>Fill eight slots: jumpshot, handles, finishing, defense, athleticism, IQ, passing, and durability.</li>
+          <li>Each slot opens a five-card pack — one player per $1–$5 tier, drawn from a 20-player pool. One new pack per slot.</li>
           <li>Ratings are hidden. Prices are hints, not promises.</li>
-          <li>Skills interact: elite finishing on $1 legs gets throttled. Spend accordingly.</li>
-          <li>Then you take one <strong>fatal flaw</strong>. It's mandatory. It will haunt you.</li>
-          <li>Your creation runs a 10-rung 1v1 gauntlet, first to 11. Lose once and it's over.</li>
+          <li>Passing creates gravity and feeds offense. Durability reduces injury odds and fatigue from Round 6 on.</li>
+          <li>Beat 10 legends 1v1. Lose once and it&apos;s over.</li>
         </ul>
       </section>
 
       <section className="mt-6">
-        <h2 className="font-display text-xl uppercase text-gold">The gauntlet</h2>
+        <h2 className="font-display text-xl uppercase text-gold">The default gauntlet</h2>
+        <p className="mt-1 text-paper/80">Every named opponent is the boss for that round. PG, SG, SF, PF, and C challenges each swap in their own all-time ladder.</p>
         <ol className="mt-2 space-y-1">
           {GAUNTLET.map((r) => (
             <li key={r.id} className="flex items-baseline gap-3 border-b border-line/50 py-1.5">
-              <span className="w-5 shrink-0 text-right font-display text-base text-dim">{r.rung}</span>
-              <span className="flex-1 font-semibold">{r.name}</span>
+              <span className="w-16 shrink-0 text-right font-display text-base text-dim">Round {r.rung}</span>
+              <span className="flex-1 font-semibold">Boss: {r.name}</span>
               <span className="text-[12px] text-dim">{r.title}</span>
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="font-display text-xl uppercase text-gold">Rating tiers</h2>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {RATING_TIERS.map((tier) => (
+            <div key={tier.id} className="border-l-2 bg-panel px-3 py-2" style={{ borderColor: tier.color }}>
+              <strong className="block" style={{ color: tier.color }}>{tier.name}</strong>
+              <span className="text-[12px] text-dim">{tier.min}–{tier.max} OVR</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-paper/80">HOF is the playable ceiling. GOAT is the 96–99 myth the game is named after.</p>
       </section>
 
       <section className="mt-6">
@@ -82,7 +98,7 @@ export default function AboutPage() {
           same shop and one official run per UTC day — with a streak and a copy-paste result block built for the
           group chat.{" "}
           <Link href="/play?mode=knowledge" className="text-gold underline underline-offset-2">Ball Knowledge</Link>{" "}
-          is hard mode: no scouting notes, just names and prices. Every finished build gets a share link that
+          is hard mode: stat lines hidden, just names and prices. Position challenges filter every pack to one position, retune scoring, and load that position&apos;s boss ladder. Every finished build gets a share link that
           challenges anyone who opens it to beat it from the same shop.
         </p>
       </section>

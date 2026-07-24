@@ -16,19 +16,19 @@ export const ROASTS: {
       early: ["Elite on both ends. Eliminated on one of them.", "Locked up both ends. Got cooked anyway. Basketball is cruel."],
       deep: ["A cheat code with one missing button."],
       door: ["Built perfect. Died at the boss anyway. That's the tax.", "Two-way everything, one loss from immortality."],
-      cleared: ["Both ends. All ten rungs. Patch this build immediately.", "The league office called. They want your receipt."],
+      cleared: ["Both ends. All ten rounds. Patch this build immediately.", "The league office called. They want your receipt."],
     },
     "point-god": {
       early: ["Saw every pass coming. Never saw the L coming."],
       deep: ["Ran the offense beautifully. Forgot it's 1v1 out here."],
-      door: ["Elite vision, and the only thing he didn't see was Rung 9."],
+      door: ["Elite vision, and the only thing he didn't see was Round 9."],
       cleared: ["Processed the whole gauntlet like a film session. Ten wins."],
     },
     "glass-cannon": {
       out1: ["All offense, no brakes, crashed on the first turn."],
       early: ["Scored 40 a night until someone scored 41."],
       deep: ["Traded buckets with legends until the register ran out."],
-      door: ["Offense wins games. Defense wins Rung 9. He had one.", "Outscored everyone until the one guy he couldn't."],
+      door: ["Offense wins games. Defense wins Round 9. He had one.", "Outscored everyone until the one guy he couldn't."],
     },
     "lockdown": {
       early: ["Locked the front door. They came through a window."],
@@ -44,7 +44,7 @@ export const ROASTS: {
     "microwave": {
       out1: ["Preheated for nothing."],
       early: ["Instant offense. Instant exit."],
-      deep: ["Cooked for six rungs. Then the power went out."],
+      deep: ["Cooked for six rounds. Then the power went out."],
     },
     "budget-baller": {
       out1: ["Spent $6. Got $6 worth."],
@@ -68,10 +68,10 @@ export const ROASTS: {
     "glue-guy": {
       out1: ["The little things didn't include scoring."],
       early: ["Glue melts under playoff lights."],
-      deep: ["The glue held for six whole rungs. Premium adhesive."],
+      deep: ["The glue held for six whole rounds. Premium adhesive."],
     },
     "ten-day": {
-      out1: ["Cooked by Boban. Boban felt bad about it.", "The 10-day contract lasted one rung."],
+      out1: ["Cooked by Boban. Boban felt bad about it.", "The 10-day contract lasted one round."],
       early: ["Made it further than the front office expected. Still cut."],
       deep: ["Someone tell the G-League a legend is coming back down."],
     },
@@ -80,7 +80,7 @@ export const ROASTS: {
     out1: [
       "Gone before the gym got warm.",
       "The warmup lasted longer than the run.",
-      "First rung. FIRST rung.",
+      "First round. FIRST round.",
     ],
     early: [
       "A cameo, not a career.",
@@ -93,12 +93,12 @@ export const ROASTS: {
       "Went out swinging against immortals.",
     ],
     door: [
-      "One rung from forever. That one stings.",
+      "One round from forever. That one stings.",
       "So close the banners were being printed.",
       "Died at the door with the key in hand.",
     ],
     cleared: [
-      "Ten rungs. Zero losses. Frame it and retire.",
+      "Ten rounds. Zero losses. Frame it and retire.",
       "The gauntlet will tell its kids about this one.",
       "Immortal. No notes.",
     ],

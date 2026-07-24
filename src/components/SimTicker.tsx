@@ -7,7 +7,7 @@ import { usePrefersReducedMotion } from "@/lib/hooks";
 
 /**
  * The 1.8s pre-reveal beat. Play-by-play lines build tension while the ten
- * rung dots fill; the result is already computed and waiting behind it.
+ * round dots fill; the result is already computed and waiting behind it.
  */
 export function SimTicker({ attempt }: { attempt: number }) {
   const reduced = usePrefersReducedMotion();

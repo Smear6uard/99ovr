@@ -1,32 +1,21 @@
 import type { Price } from "@/lib/types";
+import { RATING_TIERS } from "@/config/ratingTiers";
 
-export type TierId = "bronze" | "silver" | "gold" | "violet";
+export { RATING_TIERS } from "@/config/ratingTiers";
 
-export const TIER_HEX: Record<TierId, string> = {
-  bronze: "#B0793F",
-  silver: "#C7CDD6",
-  gold: "#F2B94B",
-  violet: "#8B5CF6",
-};
+export type TierId = (typeof RATING_TIERS)[number]["id"];
 
-export const TIER_NAMES: Record<TierId, string> = {
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
-  violet: "Dark Matter",
-};
+export const TIER_HEX = Object.fromEntries(RATING_TIERS.map((tier) => [tier.id, tier.color])) as Record<TierId, string>;
+export const TIER_NAMES = Object.fromEntries(RATING_TIERS.map((tier) => [tier.id, tier.name])) as Record<TierId, string>;
 
-/** The UI's accent logic: the rating on screen decides the accent color. */
 export function tierFor(ovr: number): TierId {
-  if (ovr >= 90) return "violet";
-  if (ovr >= 80) return "gold";
-  if (ovr >= 70) return "silver";
-  return "bronze";
+  return (RATING_TIERS.find((tier) => ovr >= tier.min && ovr <= tier.max) ?? RATING_TIERS[0]).id;
 }
 
-/** Price patches use the same metal language. Violet stays earned-only. */
 export function tierForPrice(price: Price): TierId {
-  if (price >= 4) return "gold";
-  if (price === 3) return "silver";
-  return "bronze";
+  if (price === 5) return "hof";
+  if (price === 4) return "superstar";
+  if (price === 3) return "starter";
+  if (price === 2) return "role";
+  return "bench";
 }

@@ -1,5 +1,6 @@
 import { fnv1a } from "@/lib/rng";
-import type { SimResult } from "@/lib/types";
+import { POSITION_LABELS, type SimResult } from "@/lib/types";
+import { TIER_NAMES, tierFor } from "@/lib/tiers";
 import { GAUNTLET } from "@/data/gauntlet";
 
 /** Daily #1 = launch day (UTC). */
@@ -46,14 +47,16 @@ export function formatDailyBlock(result: SimResult, dailyNo: number, topPct?: nu
     fellAt === null
       ? "🟩".repeat(10)
       : "🟩".repeat(fellAt - 1) + "🟥" + "⬛".repeat(10 - fellAt);
-  const ladderLine =
+  const roundLine =
     fellAt === null
-      ? "🪜 Cleared all 10 rungs"
-      : `🪜 Fell at Rung ${fellAt} (${GAUNTLET[fellAt - 1].shortName})`;
+      ? "🏆 Beat all 10 bosses"
+      : `🏀 Round ${fellAt} Boss: ${(result.gauntlet ?? GAUNTLET)[fellAt - 1].shortName}`;
+  const position = result.build?.position && result.build.position !== "ALL" ? ` ${POSITION_LABELS[result.build.position]}` : "";
   const lines = [
     `99OVR Daily #${dailyNo}`,
-    `🏀 ${derived.ovr} OVR · ${archetype.name}`,
-    ladderLine,
+    `🏀 ${derived.ovr} OVR${position} · ${TIER_NAMES[tierFor(derived.ovr)]}`,
+    `🧬 ${archetype.name}`,
+    roundLine,
     squares,
   ];
   if (typeof topPct === "number") lines.push(`📊 Top ${topPct}% today`);

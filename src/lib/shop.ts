@@ -1,7 +1,7 @@
 import { POOL } from "@/data/pool";
 import { FLAWS } from "@/data/flaws";
 import { fnv1a, mulberry32, shuffle } from "@/lib/rng";
-import { SLOTS, type Price, type SlotId } from "@/lib/types";
+import { SLOTS, type PositionMode, type Price, type SlotId } from "@/lib/types";
 import { BUDGET } from "@/lib/sim";
 
 export const PRICE_ORDER: Price[] = [5, 4, 3, 2, 1];
@@ -10,10 +10,12 @@ export const PRICE_ORDER: Price[] = [5, 4, 3, 2, 1];
 export type ShopDraw = Record<SlotId, number[]>;
 
 /** Seeded per-tier permutations for a slot — the whole draw derives from these. */
-function tierPerms(seed: number, slot: SlotId): number[][] {
-  const rng = mulberry32(fnv1a(`shop:${seed}:${slot}`));
+function tierPerms(seed: number, slot: SlotId, position: PositionMode = "ALL"): number[][] {
+  const rng = mulberry32(fnv1a(`shop:${seed}:${slot}:${position}`));
   return PRICE_ORDER.map((price) => {
-    const tier = POOL[slot].map((_, i) => i).filter((i) => POOL[slot][i].price === price);
+    const tier = POOL[slot].map((_, i) => i).filter((i) =>
+      POOL[slot][i].price === price && (position === "ALL" || POOL[slot][i].positions.includes(position))
+    );
     return shuffle(rng, tier);
   });
 }
@@ -23,10 +25,10 @@ function tierPerms(seed: number, slot: SlotId): number[][] {
  * takes the *next* entry in each tier's seeded permutation, so a re-roll
  * always yields five fresh options and stays fully deterministic.
  */
-export function drawShop(seed: number, rerolled: SlotId[]): ShopDraw {
+export function drawShop(seed: number, rerolled: SlotId[], position: PositionMode = "ALL"): ShopDraw {
   const draw = {} as ShopDraw;
   for (const slot of SLOTS) {
-    const perms = tierPerms(seed, slot);
+    const perms = tierPerms(seed, slot, position);
     const take = rerolled.includes(slot) ? 1 : 0;
     draw[slot] = perms.map((perm) => perm[Math.min(take, perm.length - 1)]);
   }
@@ -38,8 +40,8 @@ export function drawShop(seed: number, rerolled: SlotId[]): ShopDraw {
  * this seed (initial draw + the one re-roll). Server-side anti-cheat for
  * daily submissions: codes with unreachable picks are rejected.
  */
-export function reachablePicks(seed: number, slot: SlotId): number[] {
-  return tierPerms(seed, slot).flatMap((perm) => perm.slice(0, 2));
+export function reachablePicks(seed: number, slot: SlotId, position: PositionMode = "ALL"): number[] {
+  return tierPerms(seed, slot, position).flatMap((perm) => perm.slice(0, 2));
 }
 
 /** The 3 flaw options (indices into FLAWS) offered for a given shop seed. */
@@ -55,7 +57,8 @@ export function drawFlaws(seed: number): number[] {
 export function canPick(
   picks: Partial<Record<SlotId, number>>,
   slot: SlotId,
-  price: number
+  price: number,
+  budget = BUDGET
 ): { ok: boolean; reason?: string } {
   let spent = 0;
   let filled = 0;
@@ -68,7 +71,7 @@ export function canPick(
     }
   }
   const unfilledOthers = SLOTS.length - 1 - filled;
-  const left = BUDGET - spent - price;
+  const left = budget - spent - price;
   if (left < 0) return { ok: false, reason: "Over budget." };
   if (left < unfilledOthers) return { ok: false, reason: `That leaves you short — ${unfilledOthers} more slot${unfilledOthers === 1 ? "" : "s"} need at least $1 each.` };
   return { ok: true };

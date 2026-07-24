@@ -76,6 +76,9 @@ function FlawCard({
         <span className="mt-2 inline-block rounded-sm border border-loss/50 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.12em] text-loss">
           {flawHint(flaw).toUpperCase()}
         </span>
+        <span className="ml-2 mt-2 inline-block rounded-sm border border-gold/60 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.12em] text-gold">
+          {flaw.severity.toUpperCase()} · +${flaw.refund} BUDGET
+        </span>
       </button>
     </div>
   );
@@ -92,13 +95,11 @@ export function FlawSpin({
   selected,
   onSelect,
   onAccept,
-  onBack,
 }: {
   choices: number[];
   selected: number | null;
   onSelect: (flawIdx: number) => void;
   onAccept: () => void;
-  onBack: () => void;
 }) {
   const reduced = usePrefersReducedMotion();
   const [reel, setReel] = useState<Reel>("idle");
@@ -123,16 +124,8 @@ export function FlawSpin({
 
   return (
     <div className="flex min-h-[64vh] flex-col pt-2">
-      <button
-        type="button"
-        onClick={onBack}
-        className="self-start text-[12px] font-semibold text-dim transition-colors hover:text-paper"
-      >
-        ← Back to the shop
-      </button>
-
       <div className="mt-3 text-center">
-        <span className="block text-[10px] font-bold tracking-[0.3em] text-loss/80">MANDATORY DRAW</span>
+        <span className="block text-[10px] font-bold tracking-[0.3em] text-loss/80">STEP 1 · PICK YOUR POISON</span>
         <h1 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
           {reel === "landed" ? (
             "Pick one"
@@ -183,7 +176,7 @@ export function FlawSpin({
                   onClick={onAccept}
                   className="fade-up w-full rounded-lg bg-gold py-3.5 font-display text-xl uppercase tracking-wide text-ink shadow-[0_8px_28px_rgba(242,185,75,0.3)] transition-transform active:scale-[0.99]"
                 >
-                  Accept & run the gauntlet
+                  Take flaw & build
                 </button>
               ) : null}
             </div>
@@ -201,7 +194,7 @@ export function FlawSpin({
               {reel === "spinning" ? "Spinning…" : "Spin"}
             </button>
             <p className="mt-2 text-center text-[11px] text-dim">
-              {reel === "spinning" ? "The wheel decides nothing. You still pick." : "Take one flaw. It's free. It isn't."}
+              {reel === "spinning" ? "Three flaws incoming. You still choose." : "Worse flaws refund more budget. Risk pays cash."}
             </p>
           </>
         )}

@@ -1,69 +1,109 @@
 import { validateBuild } from "@/lib/sim";
-import type { BuildCode, GameMode } from "@/lib/types";
+import type { BuildCode, GameMode, PositionMode } from "@/lib/types";
 
-/**
- * Build ⇄ compact base64url code for /b/[code] and OG images.
- * Layout (18 bytes): v(1) mode(1) seed(4BE) picks(6) flaw(1) attempt(2BE) daily(2BE) xor(1)
- */
-const VERSION = 1;
+const CURRENT_VERSION = 2;
+const V1_BYTES = 18;
+const V2_BYTES = 21;
+const POSITION_BYTES: PositionMode[] = ["ALL", "PG", "SG", "SF", "PF", "C"];
 
 function toBase64Url(bytes: Uint8Array): string {
   let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
+  for (const byte of bytes) bin += String.fromCharCode(byte);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function fromBase64Url(code: string): Uint8Array | null {
   try {
     const b64 = code.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
-    const bin = atob(b64 + pad);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return bytes;
+    const bin = atob(b64 + (b64.length % 4 ? "=".repeat(4 - (b64.length % 4)) : ""));
+    return Uint8Array.from(bin, (char) => char.charCodeAt(0));
   } catch {
     return null;
   }
 }
 
+function checksum(bytes: Uint8Array, end: number): number {
+  let value = 0;
+  for (let i = 0; i < end; i++) value ^= bytes[i];
+  return value;
+}
+
+/** v1 stays byte-for-byte compatible; all newly created builds use v2. */
 export function encodeBuild(build: BuildCode): string {
-  const bytes = new Uint8Array(18);
-  bytes[0] = VERSION;
+  if (build.v === 1) {
+    const bytes = new Uint8Array(V1_BYTES);
+    bytes[0] = 1;
+    bytes[1] = (build.mode === "daily" ? 1 : 0) | (build.knowledge ? 0x80 : 0);
+    bytes[2] = (build.seed >>> 24) & 0xff;
+    bytes[3] = (build.seed >>> 16) & 0xff;
+    bytes[4] = (build.seed >>> 8) & 0xff;
+    bytes[5] = build.seed & 0xff;
+    for (let i = 0; i < 6; i++) bytes[6 + i] = build.picks[i] & 0xff;
+    bytes[12] = build.flaw & 0xff;
+    bytes[13] = (build.attempt >>> 8) & 0xff;
+    bytes[14] = build.attempt & 0xff;
+    bytes[15] = (build.daily >>> 8) & 0xff;
+    bytes[16] = build.daily & 0xff;
+    bytes[17] = checksum(bytes, 17);
+    return toBase64Url(bytes);
+  }
+
+  const bytes = new Uint8Array(V2_BYTES);
+  bytes[0] = CURRENT_VERSION;
   bytes[1] = (build.mode === "daily" ? 1 : 0) | (build.knowledge ? 0x80 : 0);
-  bytes[2] = (build.seed >>> 24) & 0xff;
-  bytes[3] = (build.seed >>> 16) & 0xff;
-  bytes[4] = (build.seed >>> 8) & 0xff;
-  bytes[5] = build.seed & 0xff;
-  for (let i = 0; i < 6; i++) bytes[6 + i] = build.picks[i] & 0xff;
-  bytes[12] = build.flaw & 0xff;
-  bytes[13] = (build.attempt >>> 8) & 0xff;
-  bytes[14] = build.attempt & 0xff;
-  bytes[15] = (build.daily >>> 8) & 0xff;
-  bytes[16] = build.daily & 0xff;
-  let x = 0;
-  for (let i = 0; i < 17; i++) x ^= bytes[i];
-  bytes[17] = x;
+  bytes[2] = POSITION_BYTES.indexOf(build.position ?? "ALL");
+  bytes[3] = (build.seed >>> 24) & 0xff;
+  bytes[4] = (build.seed >>> 16) & 0xff;
+  bytes[5] = (build.seed >>> 8) & 0xff;
+  bytes[6] = build.seed & 0xff;
+  for (let i = 0; i < 8; i++) bytes[7 + i] = build.picks[i] & 0xff;
+  bytes[15] = build.flaw & 0xff;
+  bytes[16] = (build.attempt >>> 8) & 0xff;
+  bytes[17] = build.attempt & 0xff;
+  bytes[18] = (build.daily >>> 8) & 0xff;
+  bytes[19] = build.daily & 0xff;
+  bytes[20] = checksum(bytes, 20);
   return toBase64Url(bytes);
 }
 
 export function decodeBuild(code: string): BuildCode | null {
   const bytes = fromBase64Url(code);
-  if (!bytes || bytes.length !== 18) return null;
-  let x = 0;
-  for (let i = 0; i < 17; i++) x ^= bytes[i];
-  if (x !== bytes[17]) return null;
-  if (bytes[0] !== VERSION) return null;
-  const modeByte = bytes[1];
-  const modeBit = modeByte & 0x7f;
+  if (!bytes) return null;
+  const version = bytes[0];
+  if (version === 1 && bytes.length === V1_BYTES) return decodeV1(bytes);
+  if (version === CURRENT_VERSION && bytes.length === V2_BYTES) return decodeV2(bytes);
+  return null;
+}
+
+function modeFrom(byte: number): { mode: GameMode; knowledge: boolean } | null {
+  const modeBit = byte & 0x7f;
   if (modeBit > 1) return null;
-  const mode: GameMode = modeBit === 1 ? "daily" : "sandbox";
-  const knowledge = (modeByte & 0x80) !== 0;
-  const seed = ((bytes[2] << 24) | (bytes[3] << 16) | (bytes[4] << 8) | bytes[5]) >>> 0;
-  const picks = Array.from(bytes.slice(6, 12));
-  const flaw = bytes[12];
-  const attempt = (bytes[13] << 8) | bytes[14];
-  const daily = (bytes[15] << 8) | bytes[16];
-  const build: BuildCode = { v: VERSION, mode, seed, picks, flaw, attempt, daily, knowledge };
-  if (!validateBuild(build)) return null;
-  return build;
+  return { mode: modeBit === 1 ? "daily" : "sandbox", knowledge: (byte & 0x80) !== 0 };
+}
+
+function decodeV1(bytes: Uint8Array): BuildCode | null {
+  if (checksum(bytes, 17) !== bytes[17]) return null;
+  const flags = modeFrom(bytes[1]);
+  if (!flags) return null;
+  const build: BuildCode = {
+    v: 1, ...flags,
+    seed: ((bytes[2] << 24) | (bytes[3] << 16) | (bytes[4] << 8) | bytes[5]) >>> 0,
+    picks: Array.from(bytes.slice(6, 12)), flaw: bytes[12],
+    attempt: (bytes[13] << 8) | bytes[14], daily: (bytes[15] << 8) | bytes[16],
+  };
+  return validateBuild(build) ? build : null;
+}
+
+function decodeV2(bytes: Uint8Array): BuildCode | null {
+  if (checksum(bytes, 20) !== bytes[20]) return null;
+  const flags = modeFrom(bytes[1]);
+  const position = POSITION_BYTES[bytes[2]];
+  if (!flags || !position) return null;
+  const build: BuildCode = {
+    v: 2, ...flags, position,
+    seed: ((bytes[3] << 24) | (bytes[4] << 16) | (bytes[5] << 8) | bytes[6]) >>> 0,
+    picks: Array.from(bytes.slice(7, 15)), flaw: bytes[15],
+    attempt: (bytes[16] << 8) | bytes[17], daily: (bytes[18] << 8) | bytes[19],
+  };
+  return validateBuild(build) ? build : null;
 }
