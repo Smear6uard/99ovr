@@ -211,7 +211,15 @@ const fill = (t: string, opp: string, ps?: number, os?: number) =>
 
 const pickAt = <T,>(arr: readonly T[], roll: number): T => arr[Math.min(arr.length - 1, Math.floor(roll * arr.length))];
 
-export function runGauntlet(derived: Derived, flaw: Flaw, simSeed: number, gauntlet: Rung[], legacy = false): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
+/** Everything the gauntlet needs from a build — shared by v2 Derived and v3 StealDerived. */
+export type GauntletInput = { playerPower: number; fatigueMod: number; durability: number };
+
+/**
+ * `flatInjuryRisk` skips the durability scaling on injury flaws — true for v1
+ * (no durability slot yet) and for v3 (durability removed; the flaw carries it).
+ */
+export function runGauntlet(derived: GauntletInput, flaw: Flaw, simSeed: number, gauntlet: Rung[], flatInjuryRisk = false): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
+  const legacy = flatInjuryRisk;
   const rng: Rng = mulberry32(simSeed);
   const rungs: RungResult[] = [];
   let fellAt: number | null = null;
@@ -337,7 +345,7 @@ export function simSeedFor(build: BuildCode): number {
   return fnv1a(`${ids}#${flawId}#${build.mode}#${dailyKey}${positionKey}#${build.attempt}`);
 }
 
-function pickRoast(simSeed: number, archetypeId: string, band: ResultBand, flawId: string, flawDecisive: boolean): string {
+export function pickRoast(simSeed: number, archetypeId: string, band: ResultBand, flawId: string, flawDecisive: boolean): string {
   const rng = mulberry32((simSeed ^ 0x9e3779b9) >>> 0);
   const flawLines = ROASTS.flaw[flawId];
   if (flawDecisive && flawLines?.length && rng() < 0.45) return pickAt(flawLines, rng());

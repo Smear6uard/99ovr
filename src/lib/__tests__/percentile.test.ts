@@ -1,38 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { POOL } from "@/data/pool";
+import { BUCKETS } from "@/data/eras";
+import { FLAWS } from "@/data/flaws";
 import { dailyNumberFor, dailySeed, formatDailyBlock } from "@/lib/daily";
 import { dailyScore, topPercentFrom, validateDailySubmission } from "@/lib/percentile";
-import { drawShop, reachablePicks } from "@/lib/shop";
-import { SLOTS, type BuildCode, type SimResult } from "@/lib/types";
+import { ROUNDS, bucketIndexAt } from "@/lib/wheel";
+import type { Grade, StealBuild, StealResult } from "@/lib/types";
 
 const DATE = "2026-07-20";
 
-/** A legal official-daily build for DATE, assembled from the actual draw. */
-function officialBuild(): BuildCode {
+/** A legal official-daily run for DATE, taking the base landing every round. */
+function officialBuild(): StealBuild {
   const seed = dailySeed(DATE);
-  const draw = drawShop(seed, []);
-  // one per tier is shown $5→$1; take the $2 pick for slot 0 and $1s elsewhere → $7 total
-  const picks = SLOTS.map((s, i) => draw[s][i === 0 ? 3 : 4]);
+  const taken = new Set<string>();
+  const steals: Array<[number, number]> = [];
+  for (let round = 0; round < ROUNDS; round++) {
+    const bucketIdx = bucketIndexAt(seed, round, 0, 0);
+    const playerIdx = BUCKETS[bucketIdx].players.findIndex((p) => !taken.has(p.person));
+    taken.add(BUCKETS[bucketIdx].players[playerIdx].person);
+    steals.push([bucketIdx, playerIdx]);
+  }
   return {
-    v: 2,
+    v: 3,
     mode: "daily",
     seed,
-    picks,
-    flaw: 2,
+    flaw: FLAWS.findIndex((f) => f.severity === "Mild"),
+    steals,
     attempt: 0,
     daily: dailyNumberFor(DATE),
     knowledge: false,
-    position: "ALL",
   };
 }
 
+const fakeResult = (ovr: number, fellAt: number | null, grades: Grade[] = ["A", "B", "C", "A-", "F", "B+"]) =>
+  ({
+    derived: { ovr },
+    fellAt,
+    steals: grades.map((grade) => ({ grade })),
+  }) as unknown as StealResult;
+
 describe("dailyScore", () => {
   it("orders by OVR first, gauntlet depth second", () => {
-    const mk = (ovr: number, fellAt: number | null) =>
-      ({ derived: { ovr }, fellAt }) as unknown as SimResult;
-    expect(dailyScore(mk(87, 9))).toBeGreaterThan(dailyScore(mk(87, 3)));
-    expect(dailyScore(mk(88, 1))).toBeGreaterThan(dailyScore(mk(87, null)));
-    expect(dailyScore(mk(87, null))).toBe(8710);
+    expect(dailyScore(fakeResult(87, 9))).toBeGreaterThan(dailyScore(fakeResult(87, 3)));
+    expect(dailyScore(fakeResult(88, 1))).toBeGreaterThan(dailyScore(fakeResult(87, null)));
+    expect(dailyScore(fakeResult(87, null))).toBe(8710);
   });
 });
 
@@ -52,7 +62,7 @@ describe("topPercentFrom", () => {
 });
 
 describe("validateDailySubmission", () => {
-  it("accepts a genuine official daily build", () => {
+  it("accepts a genuine official daily run", () => {
     expect(validateDailySubmission(officialBuild(), DATE)).toBeNull();
   });
 
@@ -64,38 +74,37 @@ describe("validateDailySubmission", () => {
     expect(validateDailySubmission({ ...b, seed: 12345 }, DATE)).toMatch(/seed|today/);
   });
 
-  it("rejects picks that today's shop could never offer", () => {
+  it("rejects a landing today's wheel could never offer", () => {
     const b = officialBuild();
-    const reachable = reachablePicks(b.seed, SLOTS[0]);
-    const unreachable = POOL[SLOTS[0]].map((_, i) => i).find((i) => !reachable.includes(i));
-    expect(unreachable).toBeDefined();
-    const forged = { ...b, picks: [unreachable!, ...b.picks.slice(1)] };
-    expect(validateDailySubmission(forged, DATE)).toMatch(/shop/);
+    const offered = new Set(
+      [0, 1, 2, 3].flatMap((t) => [0, 1, 2, 3].map((e) => bucketIndexAt(b.seed, 0, t, e)))
+    );
+    const alien = BUCKETS.findIndex((_bucket, index) => !offered.has(index));
+    expect(alien).toBeGreaterThanOrEqual(0);
+    const forged: StealBuild = { ...b, steals: [[alien, 0], ...b.steals.slice(1)] as Array<[number, number]> };
+    expect(validateDailySubmission(forged, DATE)).toMatch(/wheel/);
   });
 
-  it("reachablePicks = initial draw plus the re-roll draw", () => {
-    const seed = dailySeed(DATE);
-    for (const slot of SLOTS) {
-      const reach = reachablePicks(seed, slot);
-      expect(reach).toHaveLength(10); // 5 tiers × first two of each permutation
-      for (const idx of drawShop(seed, [])[slot]) expect(reach).toContain(idx);
-      for (const idx of drawShop(seed, [slot])[slot]) expect(reach).toContain(idx);
-    }
+  it("rejects more re-spins than the chosen flaw paid for", () => {
+    const b = officialBuild();
+    const greedy: StealBuild = {
+      ...b,
+      steals: b.steals.map((pair, round) =>
+        round < 3 ? [bucketIndexAt(b.seed, round, 1, 0), 0] : pair
+      ) as Array<[number, number]>,
+    };
+    expect(validateDailySubmission(greedy, DATE)).toMatch(/re-spins/);
   });
 });
 
 describe("emoji block with percentile", () => {
-  it("inserts the Top N% line before the URL, and only when known", () => {
-    const result = { derived: { ovr: 87 }, archetype: { name: "Two-Way Demon" }, fellAt: 9 } as unknown as SimResult;
+  it("inserts the Top N% line last, and only when known", () => {
+    const result = fakeResult(87, 9);
     const withPct = formatDailyBlock(result, 14, 9);
     expect(withPct.split("\n")).toEqual([
       "99OVR Daily #14",
-      "🏀 87 OVR · Superstar",
-      "🧬 Two-Way Demon",
-      "🏀 Round 9 Boss: LeBron",
-      "🟩🟩🟩🟩🟩🟩🟩🟩🟥⬛",
+      "🟢A 🟡B 🟡C 🟢A- 🔴F 🟡B+ · 87 OVR SUPERSTAR · Round 9 ⟶ 99ovr.app",
       "📊 Top 9% today",
-      "99ovr.app/daily",
     ]);
     expect(formatDailyBlock(result, 14)).not.toContain("📊");
     expect(formatDailyBlock(result, 14, null)).not.toContain("📊");

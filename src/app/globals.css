@@ -125,6 +125,52 @@ body {
 }
 .pack-card { animation: packCard .42s cubic-bezier(.2,.8,.2,1) both; perspective: 800px; }
 
+/* ---------------- Six Steals ---------------- */
+
+/* Two slot reels (team, era) that blur, decelerate, overshoot and settle.
+   They stop on a stagger so there is a real near-miss beat between them. */
+@keyframes slotDrop {
+  0% { transform: translateY(0); filter: blur(0); }
+  8% { filter: blur(5px); }
+  76% { filter: blur(4px); }
+  88% { transform: translateY(calc(var(--slot-travel) + 16px)); filter: blur(0); }
+  95% { transform: translateY(calc(var(--slot-travel) - 6px)); }
+  100% { transform: translateY(var(--slot-travel)); filter: blur(0); }
+}
+.slot-reel {
+  animation: slotDrop var(--slot-dur, 1.5s) cubic-bezier(0.1, 0.62, 0.2, 1) both;
+  animation-delay: var(--slot-delay, 0s);
+}
+
+/* The pointer rails ticking while a reel is still live */
+@keyframes reelTick {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; box-shadow: 0 0 12px var(--color-gold); }
+}
+.reel-tick {
+  animation: reelTick 0.12s linear infinite;
+}
+
+/* The era card slamming in once both reels settle */
+@keyframes eraSlam {
+  0% { opacity: 0; transform: scale(1.3); filter: brightness(2.2); }
+  60% { opacity: 1; transform: scale(0.975); filter: brightness(1.08); }
+  100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+}
+.era-slam {
+  animation: eraSlam 0.42s cubic-bezier(0.2, 0.85, 0.3, 1.1) both;
+}
+
+/* Grade stamps in the verdict sequence */
+@keyframes gradePop {
+  0% { opacity: 0; transform: scale(0.55) rotate(-9deg); }
+  55% { opacity: 1; transform: scale(1.14) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.grade-pop {
+  animation: gradePop 0.46s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

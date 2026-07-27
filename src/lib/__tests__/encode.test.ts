@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { decodeBuild, encodeBuild } from "@/lib/encode";
+import { decodeAny, decodeBuild, decodeSteal, encodeBuild, encodeSteal } from "@/lib/encode";
 import { mulberry32, rngInt } from "@/lib/rng";
 import { validateBuild } from "@/lib/sim";
+import { ROUNDS, bucketIndexAt } from "@/lib/wheel";
+import { BUCKETS } from "@/data/eras";
 import { POOL } from "@/data/pool";
 import { FLAWS } from "@/data/flaws";
-import { LEGACY_SLOTS, SLOTS, type BuildCode } from "@/lib/types";
+import { LEGACY_SLOTS, SLOTS, type BuildCode, type StealBuild } from "@/lib/types";
 
 function randomValidBuild(rng: () => number, version: 1 | 2 = 2): BuildCode | null {
   const slots = version === 1 ? LEGACY_SLOTS : SLOTS;
@@ -106,5 +108,102 @@ describe("encodeBuild/decodeBuild", () => {
     const decoded = decodeBuild(code);
     expect(decoded).toEqual(legacy);
     expect(encodeBuild(decoded!)).toBe(code);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* v3 — Six Steals                                                     */
+/* ------------------------------------------------------------------ */
+
+/** A legal run on `seed`, taking the first un-stolen player each round. */
+function randomStealBuild(rng: () => number): StealBuild {
+  const seed = Math.floor(rng() * 0xffffffff) >>> 0;
+  const taken = new Set<string>();
+  const steals: Array<[number, number]> = [];
+  for (let round = 0; round < ROUNDS; round++) {
+    const bucketIdx = bucketIndexAt(seed, round, 0, 0);
+    const players = BUCKETS[bucketIdx].players;
+    const offset = rngInt(rng, players.length);
+    let playerIdx = -1;
+    for (let i = 0; i < players.length; i++) {
+      const candidate = (offset + i) % players.length;
+      if (!taken.has(players[candidate].person)) {
+        playerIdx = candidate;
+        break;
+      }
+    }
+    taken.add(players[playerIdx].person);
+    steals.push([bucketIdx, playerIdx]);
+  }
+  return {
+    v: 3,
+    mode: rng() < 0.5 ? "daily" : "sandbox",
+    seed,
+    flaw: rngInt(rng, FLAWS.length),
+    steals,
+    attempt: rngInt(rng, 1000),
+    daily: rngInt(rng, 500),
+    knowledge: rng() < 0.5,
+  };
+}
+
+describe("encodeSteal/decodeSteal", () => {
+  it("round-trips hundreds of valid runs byte-perfectly", () => {
+    const rng = mulberry32(0xfeed);
+    for (let i = 0; i < 300; i++) {
+      const build = randomStealBuild(rng);
+      const code = encodeSteal(build);
+      expect(code).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(code).toHaveLength(32);
+      expect(decodeSteal(code)).toEqual(build);
+    }
+  });
+
+  it("round-trips the knowledge flag without touching anything else", () => {
+    const rng = mulberry32(0x5eed3);
+    const base = randomStealBuild(rng);
+    for (const knowledge of [true, false]) {
+      const build: StealBuild = { ...base, knowledge };
+      expect(decodeSteal(encodeSteal(build))).toEqual(build);
+    }
+  });
+
+  it("rejects tampered codes", () => {
+    const build = randomStealBuild(mulberry32(0xbadbad));
+    const code = encodeSteal(build);
+    for (let i = 0; i < code.length; i++) {
+      const flipped = code.slice(0, i) + (code[i] === "A" ? "B" : "A") + code.slice(i + 1);
+      if (flipped === code) continue;
+      const out = decodeSteal(flipped);
+      if (out !== null) expect(out).toEqual(build);
+    }
+    expect(decodeSteal("not-a-real-code")).toBeNull();
+    expect(decodeSteal("")).toBeNull();
+  });
+
+  it("rejects an illegal run even with a valid checksum", () => {
+    const build = randomStealBuild(mulberry32(7));
+    // steal from the same person twice
+    const dup: StealBuild = {
+      ...build,
+      steals: [build.steals[0], build.steals[0], ...build.steals.slice(2)] as Array<[number, number]>,
+    };
+    expect(decodeSteal(encodeSteal(dup))).toBeNull();
+  });
+
+  it("keeps v1, v2, and v3 codes in separate, non-colliding namespaces", () => {
+    const rng = mulberry32(0x1234);
+    const steal = randomStealBuild(rng);
+    const stealCode = encodeSteal(steal);
+    expect(decodeBuild(stealCode)).toBeNull();
+
+    let budget: BuildCode | null = null;
+    while (!budget) budget = randomValidBuild(rng, 2);
+    const budgetCode = encodeBuild(budget);
+    expect(decodeSteal(budgetCode)).toBeNull();
+
+    expect(decodeAny(stealCode)).toEqual({ kind: "steal", build: steal });
+    expect(decodeAny(budgetCode)).toEqual({ kind: "budget", build: budget });
+    expect(decodeAny("garbage")).toBeNull();
   });
 });

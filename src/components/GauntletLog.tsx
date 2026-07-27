@@ -1,10 +1,16 @@
 "use client";
 
-import type { SimResult } from "@/lib/types";
+import type { Rung, RungResult } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
 
-/** Round-by-round story. Reads like a box score with a narrator. */
-export function GauntletLog({ result, refreshKey }: { result: SimResult; refreshKey?: number }) {
+/** Round-by-round story. Reads like a box score with a narrator. Shared by both games. */
+export function GauntletLog({
+  result,
+  refreshKey,
+}: {
+  result: { rungs: RungResult[]; gauntlet: Rung[]; fellAt: number | null };
+  refreshKey?: number;
+}) {
   const rows = result.rungs;
   return (
     <section aria-label="Gauntlet log" className="mt-6">

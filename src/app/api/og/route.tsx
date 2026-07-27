@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
-import { decodeBuild } from "@/lib/encode";
+import { decodeAny } from "@/lib/encode";
 import { simulate } from "@/lib/sim";
-import { OgHero, OgLandscape } from "@/components/og/cards";
+import { simulateSteals } from "@/lib/steal";
+import { OgHero, OgLandscape, OgStealLandscape } from "@/components/og/cards";
 
 export const runtime = "edge";
 
@@ -32,10 +33,18 @@ export async function GET(req: Request) {
     interBoldExtData,
   ]);
 
-  const build = code ? decodeBuild(code) : null;
-  const result = build ? simulate(build) : null;
+  const decoded = code ? decodeAny(code) : null;
+  const steal = decoded?.kind === "steal" ? simulateSteals(decoded.build) : null;
+  const budget = decoded?.kind === "budget" ? simulate(decoded.build) : null;
+  const card = steal ? (
+    <OgStealLandscape result={steal} />
+  ) : budget ? (
+    <OgLandscape result={budget} />
+  ) : (
+    <OgHero />
+  );
 
-  return new ImageResponse(result ? <OgLandscape result={result} /> : <OgHero />, {
+  return new ImageResponse(card, {
     width: 1200,
     height: 630,
     fonts: [

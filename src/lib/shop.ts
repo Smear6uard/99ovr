@@ -36,15 +36,9 @@ export function drawShop(seed: number, rerolled: SlotId[], position: PositionMod
 }
 
 /**
- * Every pool index a player could legitimately have picked for this slot on
- * this seed (initial draw + the one re-roll). Server-side anti-cheat for
- * daily submissions: codes with unreachable picks are rejected.
+ * The 3 flaw options (indices into FLAWS) offered for a given seed.
+ * Shared by both games — Six Steals and Budget Ball draw flaws identically.
  */
-export function reachablePicks(seed: number, slot: SlotId, position: PositionMode = "ALL"): number[] {
-  return tierPerms(seed, slot, position).flatMap((perm) => perm.slice(0, 2));
-}
-
-/** The 3 flaw options (indices into FLAWS) offered for a given shop seed. */
 export function drawFlaws(seed: number): number[] {
   const rng = mulberry32(fnv1a(`flaws:${seed}`));
   return shuffle(rng, FLAWS.map((_, i) => i)).slice(0, 3);

@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { buildUrl, canNativeShare, copyText, downloadCard, nativeShare, resultText } from "@/lib/share";
-import type { SimResult } from "@/lib/types";
+import { buildUrl, canNativeShare, copyText, downloadCard, nativeShare } from "@/lib/share";
 
 type Feedback = Record<string, string>;
 
-/** Share sheet: native share, link, emoji block, and the 1080×1350 card. */
+/**
+ * Share sheet: native share, link, emoji block, and the 1080×1350 card.
+ * Game-agnostic — Six Steals and Budget Ball pass their own text.
+ */
 export function ShareRow({
-  result,
+  summary,
+  text,
   code,
   dailyBlock,
 }: {
-  result: SimResult;
+  summary: { ovr: number; archetypeName: string };
+  /** the full share block for this game */
+  text: string;
   code: string;
   /** official daily runs pass the exact emoji block to copy */
   dailyBlock?: string;
@@ -30,10 +35,10 @@ export function ShareRow({
       label: "Share",
       run: async () => {
         if (canNativeShare()) {
-          const ok = await nativeShare(result, code);
+          const ok = await nativeShare(summary, text, code);
           if (!ok) flash("share", "Canceled");
         } else {
-          (await copyText(`${resultText(result, code)}`)) ? flash("share", "Copied") : flash("share", "Blocked");
+          (await copyText(text)) ? flash("share", "Copied") : flash("share", "Blocked");
         }
       },
     },
@@ -48,8 +53,7 @@ export function ShareRow({
       key: "result",
       label: dailyBlock ? "Copy daily result" : "Copy result",
       run: async () => {
-        const text = dailyBlock ?? resultText(result, code);
-        (await copyText(text)) ? flash("result", "Copied") : flash("result", "Blocked");
+        (await copyText(dailyBlock ?? text)) ? flash("result", "Copied") : flash("result", "Blocked");
       },
     },
     {
@@ -57,7 +61,7 @@ export function ShareRow({
       label: "Save card",
       run: async () => {
         flash("card", "Rendering…");
-        const ok = await downloadCard(code, result.derived.ovr);
+        const ok = await downloadCard(code, summary.ovr);
         flash("card", ok ? "Saved" : "Failed");
       },
     },
@@ -70,7 +74,7 @@ export function ShareRow({
           key={a.key}
           type="button"
           onClick={() => void a.run()}
-          className="rounded-md border border-line py-2.5 text-[12px] font-bold tracking-[0.12em] text-paper uppercase transition-colors hover:border-gold hover:text-gold"
+          className="rounded-md border border-line py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-paper transition-colors hover:border-gold hover:text-gold"
         >
           {fb[a.key] || a.label}
         </button>

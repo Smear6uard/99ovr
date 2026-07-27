@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { FLAWS } from "@/data/flaws";
 import { flawHint } from "@/lib/flawHint";
 import { usePrefersReducedMotion } from "@/lib/hooks";
+import { wildFor } from "@/lib/wheel";
 
 type Reel = "idle" | "spinning" | "landed";
 
@@ -45,16 +46,28 @@ function FlawWheel({ spinning }: { spinning: boolean }) {
   );
 }
 
+/** Six Steals pays severity in re-spins; Budget Ball still pays it in dollars. */
+export type FlawEconomy = "steal" | "budget";
+
+function payoff(flawIdx: number, economy: FlawEconomy): string {
+  const flaw = FLAWS[flawIdx];
+  if (economy === "budget") return ` · +$${flaw.refund} BUDGET`;
+  const wild = wildFor(flaw.severity);
+  return wild ? ` · +${wild} RE-SPIN${wild === 1 ? "" : "S"}` : " · NO RE-SPINS";
+}
+
 /** One landed flaw option: name, desc, and its power-mechanics tag. */
 function FlawCard({
   flawIdx,
   isSel,
   index,
+  economy,
   onPick,
 }: {
   flawIdx: number;
   isSel: boolean;
   index: number;
+  economy: FlawEconomy;
   onPick: () => void;
 }) {
   const flaw = FLAWS[flawIdx];
@@ -77,7 +90,8 @@ function FlawCard({
           {flawHint(flaw).toUpperCase()}
         </span>
         <span className="ml-2 mt-2 inline-block rounded-sm border border-gold/60 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.12em] text-gold">
-          {flaw.severity.toUpperCase()} · +${flaw.refund} BUDGET
+          {flaw.severity.toUpperCase()}
+          {payoff(flawIdx, economy)}
         </span>
       </button>
     </div>
@@ -93,11 +107,13 @@ function FlawCard({
 export function FlawSpin({
   choices,
   selected,
+  economy = "steal",
   onSelect,
   onAccept,
 }: {
   choices: number[];
   selected: number | null;
+  economy?: FlawEconomy;
   onSelect: (flawIdx: number) => void;
   onAccept: () => void;
 }) {
@@ -164,6 +180,7 @@ export function FlawSpin({
                   flawIdx={flawIdx}
                   isSel={selected === flawIdx}
                   index={i}
+                  economy={economy}
                   onPick={() => onSelect(flawIdx)}
                 />
               ))}
@@ -194,7 +211,11 @@ export function FlawSpin({
               {reel === "spinning" ? "Spinning…" : "Spin"}
             </button>
             <p className="mt-2 text-center text-[11px] text-dim">
-              {reel === "spinning" ? "Three flaws incoming. You still choose." : "Worse flaws refund more budget. Risk pays cash."}
+              {reel === "spinning"
+                ? "Three flaws incoming. You still choose."
+                : economy === "budget"
+                  ? "Worse flaws refund more budget. Risk pays cash."
+                  : "Worse flaws buy extra re-spins. Risk buys options."}
             </p>
           </>
         )}

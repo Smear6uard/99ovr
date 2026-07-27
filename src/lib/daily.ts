@@ -1,7 +1,7 @@
 import { fnv1a } from "@/lib/rng";
-import { POSITION_LABELS, type SimResult } from "@/lib/types";
+import { gradeEmoji } from "@/lib/grade";
+import type { StealResult } from "@/lib/types";
 import { TIER_NAMES, tierFor } from "@/lib/tiers";
-import { GAUNTLET } from "@/data/gauntlet";
 
 /** Daily #1 = launch day (UTC). */
 export const LAUNCH_UTC = Date.UTC(2026, 6, 20);
@@ -37,29 +37,23 @@ export function formatCountdown(ms: number): string {
   return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
 
+/** "🟢A 🟢A- 🟡B 🟢A 🔴D 🟡C+" — the six steal grades, in round order. */
+export function gradeStrip(result: StealResult): string {
+  return result.steals.map((steal) => `${gradeEmoji(steal.grade)}${steal.grade}`).join(" ");
+}
+
 /**
- * The Wordle-style copy-paste block. Format is load-bearing — see
- * daily.test.ts. `topPct` (percentile v1.1) adds one line when known.
+ * The copy-paste block. Format is load-bearing — see daily.test.ts.
+ * `topPct` (percentile v1.1) adds one line when known.
  */
-export function formatDailyBlock(result: SimResult, dailyNo: number, topPct?: number | null): string {
-  const { fellAt, derived, archetype } = result;
-  const squares =
-    fellAt === null
-      ? "🟩".repeat(10)
-      : "🟩".repeat(fellAt - 1) + "🟥" + "⬛".repeat(10 - fellAt);
-  const roundLine =
-    fellAt === null
-      ? "🏆 Beat all 10 bosses"
-      : `🏀 Round ${fellAt} Boss: ${(result.gauntlet ?? GAUNTLET)[fellAt - 1].shortName}`;
-  const position = result.build?.position && result.build.position !== "ALL" ? ` ${POSITION_LABELS[result.build.position]}` : "";
+export function formatDailyBlock(result: StealResult, dailyNo: number, topPct?: number | null): string {
+  const { fellAt, derived } = result;
+  const outcome = fellAt === null ? "Beat all 10" : `Round ${fellAt}`;
+  const tier = TIER_NAMES[tierFor(derived.ovr)].toUpperCase();
   const lines = [
     `99OVR Daily #${dailyNo}`,
-    `🏀 ${derived.ovr} OVR${position} · ${TIER_NAMES[tierFor(derived.ovr)]}`,
-    `🧬 ${archetype.name}`,
-    roundLine,
-    squares,
+    `${gradeStrip(result)} · ${derived.ovr} OVR ${tier} · ${outcome} ⟶ 99ovr.app`,
   ];
   if (typeof topPct === "number") lines.push(`📊 Top ${topPct}% today`);
-  lines.push("99ovr.app/daily");
   return lines.join("\n");
 }

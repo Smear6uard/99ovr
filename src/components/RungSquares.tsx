@@ -1,7 +1,5 @@
-import type { SimResult } from "@/lib/types";
-
-/** The 10-round strip — the UI twin of the emoji block. */
-export function RungSquares({ result, size = 16 }: { result: SimResult; size?: number }) {
+/** The 10-round strip — the UI twin of the emoji block. Shared by both games. */
+export function RungSquares({ result, size = 16 }: { result: { fellAt: number | null }; size?: number }) {
   const { fellAt } = result;
   const squares = Array.from({ length: 10 }, (_, i) => {
     const rung = i + 1;

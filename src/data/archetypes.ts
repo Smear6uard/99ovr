@@ -13,6 +13,12 @@ export const ARCHETYPES: Record<string, Archetype> = {
   "certified-starter": { id: "certified-starter", name: "Certified Starter", desc: "A real rotation piece. No shame." },
   "glue-guy": { id: "glue-guy", name: "Glue Guy", desc: "Does the little things. Mostly little." },
   "ten-day": { id: "ten-day", name: "10-Day Contract", desc: "The tryout ended early." },
+  /* v3 — Six Steals */
+  connoisseur: { id: "connoisseur", name: "The Connoisseur", desc: "Took the deep cut every single time." },
+  reacher: { id: "reacher", name: "The Reacher", desc: "Saw a big number and stopped reading." },
+  "time-traveler": { id: "time-traveler", name: "Time Traveler", desc: "Six decades, one body." },
+  "era-purist": { id: "era-purist", name: "Era Purist", desc: "Found one decade and refused to leave." },
+  "box-score-scout": { id: "box-score-scout", name: "Box Score Scout", desc: "Drafted entirely off points per game." },
 };
 
 /**

@@ -1,9 +1,9 @@
 import { PERCENTILE_ENABLED } from "@/config/features";
 import { utcDateString } from "@/lib/daily";
-import { decodeBuild } from "@/lib/encode";
+import { decodeSteal } from "@/lib/encode";
 import { kvAvailable, kvPipeline } from "@/lib/kv";
 import { dailyScore, HIST_TTL_SECONDS, histKey, topPercentFrom, validateDailySubmission } from "@/lib/percentile";
-import { simulate } from "@/lib/sim";
+import { simulateSteals } from "@/lib/steal";
 
 export const runtime = "edge";
 
@@ -30,14 +30,14 @@ export async function POST(req: Request) {
   }
   if (typeof code !== "string" || code.length > 64) return json({ error: "bad code" }, 400);
 
-  const build = decodeBuild(code);
+  const build = decodeSteal(code);
   if (!build) return json({ error: "bad code" }, 400);
 
   const today = utcDateString();
   const invalid = validateDailySubmission(build, today);
   if (invalid) return json({ error: invalid }, 400);
 
-  const result = simulate(build);
+  const result = simulateSteals(build);
   if (!result) return json({ error: "bad build" }, 400);
 
   if (!kvAvailable()) return json({ topPct: null });

@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="pb-4">
       {/* ---------- HERO ---------- */}
-      <section className="relative pt-6 pb-2 text-center">
+      <section className="relative pb-2 pt-6 text-center">
         {/* local court-arc accent — echoes the global dashed 3pt arc, does not repeat the full court */}
         <svg
           aria-hidden
@@ -37,26 +37,16 @@ export default function Home() {
           </h1>
 
           <p
-            className="fade-up mx-auto mt-4 max-w-[19rem] text-[15px] leading-relaxed text-dim"
+            className="fade-up mx-auto mt-4 max-w-[20rem] text-[15px] leading-relaxed text-dim"
             style={{ animationDelay: "120ms" }}
           >
-            Eight skills from legends. One flaw that pays you back.{" "}
-            <span className="font-semibold text-paper">Ten 1v1s between you and forever.</span>
+            Six spins. Six real rosters. Steal one skill from each.{" "}
+            <span className="font-semibold text-paper">No prices — just what you actually know.</span>
           </p>
         </div>
       </section>
 
-      <section className="fade-up mt-5" aria-label="Position challenges">
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-dim">Build the best position</p>
-        <div className="mt-2 grid grid-cols-5 gap-1.5">
-          {["PG", "SG", "SF", "PF", "C"].map((position) => (
-            <Link key={position} href={`/play?position=${position}`} className="rounded-lg border border-line bg-panel py-3 text-center font-display text-xl text-paper transition-colors hover:border-gold hover:text-gold">{position}</Link>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] text-dim">Position-only packs, tuned scoring, and a custom all-time boss ladder.</p>
-      </section>
-
-      {/* ---------- MODE CARDS (PLAY -> DAILY -> BALL KNOWLEDGE) ---------- */}
+      {/* ---------- MODE CARDS ---------- */}
       <section
         className="fade-up mt-7 flex flex-col gap-3"
         style={{ animationDelay: "180ms" }}
@@ -69,7 +59,7 @@ export default function Home() {
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-gold/90">
-              Play &middot; Sandbox
+              Play &middot; Six Steals
             </span>
             <span
               className="font-display text-lg leading-none text-gold transition-transform group-hover:translate-x-0.5"
@@ -80,7 +70,7 @@ export default function Home() {
           </div>
           <h2 className="mt-2.5 font-display text-4xl uppercase leading-none text-gold">Play</h2>
           <p className="mt-2 text-[13px] leading-snug text-dim">
-            Unlimited runs. Rip packs, build a monster, chase the number you&rsquo;ll never reach.
+            Spin for a real team-era. Read the roster. Steal the skill nobody else spots.
           </p>
         </Link>
 
@@ -103,26 +93,44 @@ export default function Home() {
               &rarr;
             </span>
           </div>
-          <h2 className="mt-2.5 font-display text-3xl uppercase leading-none text-paper">
-            Ball Knowledge
-          </h2>
+          <h2 className="mt-2.5 font-display text-3xl uppercase leading-none text-paper">Ball Knowledge</h2>
           <p className="mt-2 text-[13px] leading-snug text-dim">
-            Stat strips hidden. Names and prices only. Prove you know ball.
+            Box scores hidden. Just names on a roster. Prove you know ball.
+          </p>
+        </Link>
+
+        {/* BUDGET BALL — the original, now secondary */}
+        <Link
+          href="/budget"
+          className="group block rounded-xl border border-line bg-panel2 px-5 py-4 transition-colors hover:border-gold/60"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-dim">
+              Budget Ball &middot; <span className="text-gold/70">The Original</span>
+            </span>
+            <span
+              className="font-display text-lg leading-none text-dim transition-colors group-hover:text-gold"
+              aria-hidden
+            >
+              &rarr;
+            </span>
+          </div>
+          <h2 className="mt-2.5 font-display text-3xl uppercase leading-none text-paper">Budget Ball</h2>
+          <p className="mt-2 text-[13px] leading-snug text-dim">
+            The $20 challenge. Priced legends, eight slots, one flaw that pays you back.
           </p>
         </Link>
       </section>
 
       {/* ---------- HOW IT WORKS ---------- */}
       <section className="mt-10" aria-label="How it works">
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-dim">
-          How it works
-        </p>
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-dim">How it works</p>
         <div className="mt-4 flex items-start justify-center gap-3 text-center">
-          <Step word="Risk" gloss="pick a flaw" />
+          <Step word="Gamble" gloss="spin the era" />
           <Sep />
-          <Step word="Rip" gloss="eight packs" />
+          <Step word="Know" gloss="read the roster" />
           <Sep />
-          <Step word="Survive" gloss="the gauntlet" />
+          <Step word="Answer" gloss="for the pick" />
         </div>
       </section>
     </div>

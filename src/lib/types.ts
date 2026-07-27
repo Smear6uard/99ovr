@@ -57,6 +57,140 @@ export type PoolEntry = {
   stats: string[];
 };
 
+/* ------------------------------------------------------------------ */
+/* v3 — Six Steals                                                     */
+/* ------------------------------------------------------------------ */
+
+/** The six stealable attributes, in round order. Encoding-stable. */
+export const ATTRS = ["jumpshot", "handles", "finishing", "playmaking", "defense", "athleticism"] as const;
+
+export type AttrId = (typeof ATTRS)[number];
+
+export const ATTR_LABELS: Record<AttrId, string> = {
+  jumpshot: "Jumpshot",
+  handles: "Handles",
+  finishing: "Finishing",
+  playmaking: "Playmaking",
+  defense: "Defense",
+  athleticism: "Athleticism",
+};
+
+export const ATTR_ABBR: Record<AttrId, string> = {
+  jumpshot: "JS",
+  handles: "HND",
+  finishing: "FIN",
+  playmaking: "PLY",
+  defense: "DEF",
+  athleticism: "ATH",
+};
+
+/** Hidden per-attribute ratings, in ATTRS order. */
+export type Ratings = readonly [number, number, number, number, number, number];
+
+export type EraVibe = "iconic" | "solid" | "rough";
+
+export type EraPlayer = {
+  /** unique within the bucket */
+  id: string;
+  /** dedup key across buckets — the same human is one steal, everywhere */
+  person: string;
+  name: string;
+  /** display box line, e.g. "30.4 PPG · 6.6 RPG · 4.3 APG" */
+  line: string;
+  /** one signature line of flavor */
+  note: string;
+  r: Ratings;
+};
+
+export type EraBucket = {
+  id: string;
+  franchise: string;
+  /** reel word, e.g. "BULLS" */
+  team: string;
+  /** reel word, e.g. "1996" */
+  season: string;
+  /** "1996 BULLS" */
+  label: string;
+  decade: number;
+  vibe: EraVibe;
+  /** era-card flavor line */
+  tag: string;
+  players: EraPlayer[];
+};
+
+export type Franchise = {
+  id: string;
+  team: string;
+  /** bucket indices into BUCKETS, ordered oldest → newest */
+  eras: number[];
+};
+
+export type Grade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D+" | "D" | "F";
+
+export type Steal = {
+  attr: AttrId;
+  bucket: EraBucket;
+  player: EraPlayer;
+  rating: number;
+  /** 0-indexed dense rank of `rating` within the bucket for `attr` */
+  rank: number;
+  /** the roster's best at this attribute — what you left on the table */
+  best: EraPlayer;
+  grade: Grade;
+  verdict: string;
+  /** team re-spins and era re-spins spent to reach this bucket */
+  spins: { team: number; era: number };
+};
+
+/** The encodable v3 run. */
+export type StealBuild = {
+  v: 3;
+  mode: GameMode;
+  seed: number;
+  /** index into FLAWS */
+  flaw: number;
+  /** [bucketIdx, playerIdx] per round, in ATTRS order */
+  steals: Array<[number, number]>;
+  attempt: number;
+  daily: number;
+  knowledge: boolean;
+};
+
+export type StealDerived = {
+  ratings: Record<AttrId, number>;
+  shotCreation: number;
+  rimPressure: number;
+  offenseRaw: number;
+  defenseRaw: number;
+  offense: number;
+  defense: number;
+  playmaking: number;
+  athleticism: number;
+  fatigueMod: number;
+  ovr: number;
+  playerPower: number;
+  synergies: SynergyHit[];
+};
+
+export type StealResult = {
+  build: StealBuild;
+  steals: Steal[];
+  flaw: Flaw;
+  derived: StealDerived;
+  rungs: RungResult[];
+  fellAt: number | null;
+  injured: boolean;
+  band: ResultBand;
+  archetype: Archetype;
+  roast: string;
+  simSeed: number;
+  gauntlet: Rung[];
+  /** highest-graded steal, ties broken by rating */
+  bestSteal: Steal;
+  /** lowest-graded steal, ties broken by rating */
+  reach: Steal;
+};
+
 export type FlawSeverity = "Mild" | "Bad" | "Brutal" | "Career-Threatening";
 
 export type FlawEffect =

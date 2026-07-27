@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { dailyNumberFor, dailySeed, formatCountdown, formatDailyBlock, msToNextUtcMidnight, utcDateString } from "@/lib/daily";
-import { decodeBuild } from "@/lib/encode";
+import { decodeSteal } from "@/lib/encode";
 import { useMounted } from "@/lib/hooks";
 import { submitDailyRank } from "@/lib/rankClient";
-import { simulate } from "@/lib/sim";
+import { resultText } from "@/lib/share";
+import { simulateSteals } from "@/lib/steal";
 import { attachDailyPercentile, getDailyState, recordOfficialDaily, type DailyState } from "@/lib/storage";
-import type { SimResult } from "@/lib/types";
-import { GameFlow } from "@/components/GameFlow";
+import type { StealResult } from "@/lib/types";
+import { StealFlow } from "@/components/StealFlow";
 import { GauntletLog } from "@/components/GauntletLog";
-import { ResultCard } from "@/components/ResultCard";
+import { StealCard } from "@/components/StealCard";
 import { ShareRow } from "@/components/ShareRow";
 
 function Countdown() {
@@ -54,11 +55,11 @@ export function DailyShell() {
   }
 
   const playedToday = state.last?.date === today.date;
-  const official: SimResult | null =
+  const official: StealResult | null =
     playedToday && state.last
       ? (() => {
-          const build = decodeBuild(state.last.code);
-          return build ? simulate(build) : null;
+          const build = decodeSteal(state.last.code);
+          return build ? simulateSteals(build) : null;
         })()
       : null;
 
@@ -67,7 +68,7 @@ export function DailyShell() {
       <div className="flex items-end justify-between pb-4 pt-1">
         <div>
           <h1 className="font-display text-[27px] uppercase leading-none">Daily #{today.number}</h1>
-          <p className="mt-1 text-[12px] text-dim">Everyone on Earth gets this shop.</p>
+          <p className="mt-1 text-[12px] text-dim">Everyone on Earth gets this wheel.</p>
         </div>
         <div className="text-right text-[11px] font-bold tracking-[0.14em]">
           <p className="text-dim">
@@ -86,11 +87,11 @@ export function DailyShell() {
             <div className="mb-4 rounded-lg border border-gold/50 bg-panel p-3 text-[13px]">
               <p className="text-[10px] font-bold tracking-[0.2em] text-gold">OFFICIAL ATTEMPT</p>
               <p className="mt-1 text-paper">
-                One run counts. It locks the second the buzzer sounds — build like it matters.
+                One run counts. Six steals, then it locks — read like it matters.
               </p>
             </div>
           ) : null}
-          <GameFlow
+          <StealFlow
             mode="daily"
             fixedSeed={today.seed}
             daily={{ number: today.number, date: today.date }}
@@ -121,9 +122,9 @@ export function DailyShell() {
       ) : practicing ? (
         <>
           <div className="mb-4 rounded-lg border border-line bg-panel p-3 text-[12px] text-dim">
-            Practice mode — same shop, nothing counts, nobody has to know.
+            Practice mode — same wheel, nothing counts, nobody has to know.
           </div>
-          <GameFlow
+          <StealFlow
             mode="daily"
             fixedSeed={today.seed}
             daily={{ number: today.number, date: today.date }}
@@ -134,13 +135,14 @@ export function DailyShell() {
         <div>
           {official ? (
             <>
-              <ResultCard
+              <StealCard
                 result={official}
                 modeChip={`DAILY #${today.number} · OFFICIAL`}
                 topPct={state.last?.topPct ?? null}
               />
               <ShareRow
-                result={official}
+                summary={{ ovr: official.derived.ovr, archetypeName: official.archetype.name }}
+                text={resultText(official, state.last!.code)}
                 code={state.last!.code}
                 dailyBlock={state.last!.block}
               />
@@ -160,7 +162,7 @@ export function DailyShell() {
             onClick={() => setPracticing(true)}
             className="mt-4 w-full rounded-lg border border-line py-3 font-display text-lg uppercase tracking-wide text-paper transition-colors hover:border-gold hover:text-gold"
           >
-            Practice today&apos;s shop
+            Practice today&apos;s wheel
           </button>
 
           {official ? <GauntletLog result={official} /> : null}

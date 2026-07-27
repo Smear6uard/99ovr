@@ -1,17 +1,18 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { SandboxGame } from "@/components/SandboxGame";
+import { StealGame } from "@/components/StealGame";
 
 export const metadata: Metadata = {
   title: "Play",
-  description: "Pick a flaw, rip eight packs, and build the perfect NBA player for a $20+ budget.",
+  description:
+    "Spin for a real team-era, read the roster, and steal one player's skill. Six rounds, no prices, ten bosses.",
   alternates: { canonical: "/play" },
 };
 
 export default function PlayPage() {
   return (
     <Suspense fallback={<div className="min-h-[480px]" aria-hidden />}>
-      <SandboxGame />
+      <StealGame />
     </Suspense>
   );
 }

@@ -1,31 +1,44 @@
 "use client";
 
 import { SITE_URL } from "@/config/site";
+import { gradeStrip } from "@/lib/daily";
 import { TIER_NAMES, tierFor } from "@/lib/tiers";
-import { POSITION_LABELS, type SimResult } from "@/lib/types";
+import type { SimResult, StealResult } from "@/lib/types";
 
 export function buildUrl(code: string): string {
   return `${SITE_URL}/b/${code}`;
 }
 
-/** Sandbox/share text block — same bones as the daily block, plus the duel link. */
-export function resultText(result: SimResult, code: string): string {
+function squaresFor(fellAt: number | null): string {
+  return fellAt === null ? "🟩".repeat(10) : "🟩".repeat(fellAt - 1) + "🟥" + "⬛".repeat(10 - fellAt);
+}
+
+/** Six Steals share text — same bones as the daily block, plus the duel link. */
+export function resultText(result: StealResult, code: string): string {
   const { fellAt, derived, archetype } = result;
-  const squares =
-    fellAt === null
-      ? "🟩".repeat(10)
-      : "🟩".repeat(fellAt - 1) + "🟥" + "⬛".repeat(10 - fellAt);
   const roundLine =
-    fellAt === null
-      ? "🏆 Beat all 10 bosses"
-      : `🏀 Round ${fellAt} Boss: ${result.gauntlet[fellAt - 1].shortName}`;
-  const position = result.build.position && result.build.position !== "ALL" ? ` ${POSITION_LABELS[result.build.position]}` : "";
+    fellAt === null ? "🏆 Beat all 10 bosses" : `🏀 Round ${fellAt} Boss: ${result.gauntlet[fellAt - 1].shortName}`;
   const lines = [
-    `99OVR — ${derived.ovr} OVR${position} · ${TIER_NAMES[tierFor(derived.ovr)]}`,
+    `99OVR — ${derived.ovr} OVR · ${TIER_NAMES[tierFor(derived.ovr)]}`,
+    gradeStrip(result),
     archetype.name,
   ];
   if (result.build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
-  lines.push(roundLine, squares, `Beat my build → ${buildUrl(code)}`);
+  lines.push(roundLine, squaresFor(fellAt), `Beat my build → ${buildUrl(code)}`);
+  return lines.join("\n");
+}
+
+/** Budget Ball (the legacy $20 game) share text. */
+export function budgetResultText(result: SimResult, code: string): string {
+  const { fellAt, derived, archetype } = result;
+  const roundLine =
+    fellAt === null ? "🏆 Beat all 10 bosses" : `🏀 Round ${fellAt} Boss: ${result.gauntlet[fellAt - 1].shortName}`;
+  const lines = [
+    `99OVR Budget Ball — ${derived.ovr} OVR · ${TIER_NAMES[tierFor(derived.ovr)]}`,
+    archetype.name,
+  ];
+  if (result.build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
+  lines.push(roundLine, squaresFor(fellAt), `Beat my $20 build → ${buildUrl(code)}`);
   return lines.join("\n");
 }
 
@@ -54,11 +67,15 @@ export function canNativeShare(): boolean {
   return typeof navigator !== "undefined" && typeof navigator.share === "function";
 }
 
-export async function nativeShare(result: SimResult, code: string): Promise<boolean> {
+export async function nativeShare(
+  summary: { ovr: number; archetypeName: string },
+  text: string,
+  code: string
+): Promise<boolean> {
   try {
     await navigator.share({
-      title: `${result.derived.ovr} OVR · ${result.archetype.name} — 99OVR`,
-      text: resultText(result, code),
+      title: `${summary.ovr} OVR · ${summary.archetypeName} — 99OVR`,
+      text,
       url: buildUrl(code),
     });
     return true;

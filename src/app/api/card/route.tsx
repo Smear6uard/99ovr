@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
-import { decodeBuild } from "@/lib/encode";
+import { decodeAny } from "@/lib/encode";
 import { simulate } from "@/lib/sim";
-import { OgPortrait } from "@/components/og/cards";
+import { simulateSteals } from "@/lib/steal";
+import { OgPortrait, OgStealPortrait } from "@/components/og/cards";
 
 export const runtime = "edge";
 
@@ -25,9 +26,10 @@ const interBoldExtData = fetch(new URL("../../../assets/fonts/Inter-Bold-Ext.wof
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("b");
-  const build = code ? decodeBuild(code) : null;
-  const result = build ? simulate(build) : null;
-  if (!result) {
+  const decoded = code ? decodeAny(code) : null;
+  const steal = decoded?.kind === "steal" ? simulateSteals(decoded.build) : null;
+  const budget = decoded?.kind === "budget" ? simulate(decoded.build) : null;
+  if (!steal && !budget) {
     return new Response("Unknown build", { status: 404 });
   }
   const [anton, inter, interBold, interExt, interBoldExt] = await Promise.all([
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
     interBoldExtData,
   ]);
 
-  return new ImageResponse(<OgPortrait result={result} />, {
+  return new ImageResponse(steal ? <OgStealPortrait result={steal} /> : <OgPortrait result={budget!} />, {
     width: 1080,
     height: 1350,
     fonts: [

@@ -7,8 +7,11 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  esbuild: { jsx: "automatic" },
   test: {
+    // Pure-logic tests run in node; the *.dom.test.tsx flow tests get jsdom.
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    environmentMatchGlobs: [["src/**/*.dom.test.tsx", "jsdom"]],
   },
 });
