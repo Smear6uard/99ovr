@@ -41,6 +41,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: ["/api/og"],
   },
+  ...(ADSENSE_CLIENT ? { other: { "google-adsense-account": ADSENSE_CLIENT } } : {}),
 };
 
 export const viewport: Viewport = {

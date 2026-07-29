@@ -17,7 +17,7 @@ export function AdSlot({ id, refreshKey = 0 }: { id: AdSlotId; refreshKey?: numb
   const slot = AD_SLOTS[id];
 
   useEffect(() => {
-    if (!ADS_ENABLED) return;
+    if (!ADS_ENABLED || !ADSENSE_CLIENT || !slot.adUnit) return;
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {
@@ -31,7 +31,7 @@ export function AdSlot({ id, refreshKey = 0 }: { id: AdSlotId; refreshKey?: numb
       className="my-6 w-full overflow-hidden rounded-md border border-dashed border-line/70"
       aria-hidden
     >
-      {ADS_ENABLED && ADSENSE_CLIENT ? (
+      {ADS_ENABLED && ADSENSE_CLIENT && slot.adUnit ? (
         <ins
           key={`${id}-${refreshKey}`}
           className="adsbygoogle block"
