@@ -3,7 +3,7 @@
  * explicit display:flex on every multi-child container — satori rules.
  */
 import { GRADE_HEX } from "@/lib/grade";
-import { STEAL_BUDGET } from "@/lib/steal";
+import { STEAL_BUDGET, stealBudgetFor } from "@/lib/steal";
 import { TIER_HEX, TIER_NAMES, tierFor, tierForPrice } from "@/lib/tiers";
 import { ATTR_ABBR, POSITION_LABELS, type SimResult, type StealResult } from "@/lib/types";
 
@@ -540,7 +540,7 @@ function StealChips({ result, size = 16 }: { result: StealResult; size?: number 
 /** FLAW sidebar block — Budget (and v3) only; classic/daily runs have none. */
 function FlawBlock({ result, scale = 1 }: { result: StealResult; scale?: number }) {
   if (!result.flaw) return null;
-  const budget = result.build.v === 4 && result.build.mode === "budget";
+  const budget = result.build.v >= 4 && result.build.mode === "budget";
   return (
     <div style={{ display: "flex", flexDirection: "column", borderLeft: `4px solid ${LOSS}`, paddingLeft: 14 * scale }}>
       <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 13 * scale, color: LOSS, letterSpacing: 3 }}>
@@ -551,7 +551,7 @@ function FlawBlock({ result, scale = 1 }: { result: StealResult; scale?: number 
       </span>
       {budget ? (
         <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 14 * scale, color: GOLD, marginTop: 4 * scale }}>
-          ${result.spent} SPENT OF ${STEAL_BUDGET + result.refund}
+          ${result.spent} SPENT OF ${stealBudgetFor(result.build.v) + result.refund}
         </span>
       ) : null}
     </div>
@@ -758,7 +758,7 @@ const HERO_COPY: Record<HeroVariant, { tagline: string; sub: string; prices: boo
   default: { tagline: "SPIN AN ERA. READ THE ROSTER. STEAL THE SKILL.", sub: "FOUR MODES · SIX STEALS · TEN BOSSES", prices: false },
   daily: { tagline: "SAME WHEEL FOR EVERYONE ON EARTH.", sub: "DAILY · ONE OFFICIAL RUN · ARCADE LEADERBOARD", prices: false },
   classic: { tagline: "SIX SPINS. SIX ROSTERS. NO PRICES.", sub: "CLASSIC · BEST PLAYER OR A POSITIONAL CROWN", prices: false },
-  budget: { tagline: "EVERY SKILL HAS A PRICE. YOU HAVE $20.", sub: "BUDGET · THE WEAKNESS WHEEL PAYS YOU BACK", prices: true },
+  budget: { tagline: `EVERY SKILL HAS A PRICE. YOU HAVE $${STEAL_BUDGET}.`, sub: "BUDGET · THE WEAKNESS WHEEL PAYS YOU BACK", prices: true },
   h2h: { tagline: "SAME WHEEL. ONE WINNER.", sub: "HEAD TO HEAD · LOSER TAKES THE ROAST", prices: false },
 };
 

@@ -29,6 +29,13 @@ export function RosterCard({
   onSteal: (playerIdx: number) => void;
 }) {
   const attrIdx = ATTRS.indexOf(attr);
+  // Budget lists priciest first — the board reads $5 → $1; other modes keep roster order
+  const rows = bucket.players.map((player, index) => ({
+    player,
+    index,
+    price: budget ? priceIn(bucket, attrIdx, index) : null,
+  }));
+  if (budget) rows.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
   return (
     <div>
       <div className="flex items-baseline justify-between px-0.5">
@@ -39,9 +46,8 @@ export function RosterCard({
       </div>
 
       <ul className="mt-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-panel">
-        {bucket.players.map((player, index) => {
+        {rows.map(({ player, index, price }) => {
           const taken = stolen.has(player.person);
-          const price = budget ? priceIn(bucket, attrIdx, index) : null;
           const broke =
             budget !== null && budget !== undefined && price !== null
               ? !canAffordSteal(budget.spent, price, budget.round, budget.refund)

@@ -120,9 +120,9 @@ export default function Home() {
         <ModeCard
           href="/budget"
           kicker="Budget"
-          kickerAccent="$20 · Weakness Wheel"
+          kickerAccent="$15 · Weakness Wheel"
           title="Budget"
-          blurb="Every skill has a price and you have $20. Halfway in, the weakness wheel pays you to take a flaw."
+          blurb="Every skill has a price and you have $15. Halfway in, the weakness wheel pays you to take a flaw."
         />
 
         <ModeCard

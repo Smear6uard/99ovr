@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { GRADE_HEX } from "@/lib/grade";
 import { usePrefersReducedMotion } from "@/lib/hooks";
-import { STEAL_BUDGET } from "@/lib/steal";
+import { stealBudgetFor } from "@/lib/steal";
 import { TIER_HEX, TIER_NAMES, tierFor } from "@/lib/tiers";
 import { ATTR_ABBR, ATTR_LABELS, type StealResult } from "@/lib/types";
 import { Odometer } from "@/components/Odometer";
@@ -47,7 +47,7 @@ export function StealCard({
   const reduced = usePrefersReducedMotion();
   const { derived, archetype, fellAt, injured, flaw, steals, roast, build } = result;
   const target = build.target ?? "ALL";
-  const budgetMode = build.v === 4 && build.mode === "budget";
+  const budgetMode = build.v >= 4 && build.mode === "budget";
   const [shown, setShown] = useState(animate ? 0 : derived.ovr);
   const [stamped, setStamped] = useState(!animate);
 
@@ -239,11 +239,11 @@ export function StealCard({
             <span>
               <span className="mr-2 text-[10px] font-bold tracking-[0.18em] text-gold">BUDGET</span>
               <span className="font-semibold">
-                ${result.spent} spent of ${STEAL_BUDGET + result.refund}
+                ${result.spent} spent of ${stealBudgetFor(build.v) + result.refund}
               </span>
             </span>
             <span className="text-[10px] tracking-[0.14em] text-dim">
-              ${STEAL_BUDGET + result.refund - result.spent} LEFT OVER
+              ${stealBudgetFor(build.v) + result.refund - result.spent} LEFT OVER
             </span>
           </div>
         ) : null}

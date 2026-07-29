@@ -6,7 +6,7 @@ import { SetupSheet, type StealSettings } from "@/components/SetupSheet";
 import { StealFlow } from "@/components/StealFlow";
 
 /**
- * Budget: the same spin-steal loop with a $20 wallet, prices on every roster,
+ * Budget: the same spin-steal loop with a $15 wallet, prices on every roster,
  * and the weakness wheel breaking the run after three steals.
  */
 export function BudgetSteals() {

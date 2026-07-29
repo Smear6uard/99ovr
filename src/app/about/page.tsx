@@ -28,7 +28,7 @@ const FAQ = [
   },
   {
     q: "Same run, different results?",
-    a: "Every sim is seeded. The same code replays identically forever — in the app, on a share link, and in the preview image. Run It Back re-rolls only the variance, like playing the same opponent twice.",
+    a: "Every sim is seeded. The same code replays identically forever — in the app, on a share link, and in the preview image. Run It Back starts a whole new build on a fresh wheel.",
   },
   {
     q: "How does the Daily leaderboard stop cheaters?",
@@ -114,8 +114,8 @@ export default function AboutPage() {
             <dd className="mt-0.5 text-paper/80">
               Same loop, but every roster player shows a price for the current attribute and the run has $
               {STEAL_BUDGET} total. After three steals the <strong>weakness wheel</strong> interrupts: take a flaw,
-              and the worse it is, the more budget it refunds for the last three steals (Mild +$0 · Bad +$1 ·
-              Brutal +$2 · Career-Threatening +$3). Someone on every roster is on a $1 minimum contract.
+              and the worse it is, the more budget it refunds for the last three steals (Mild +$1 · Bad +$2 ·
+              Brutal +$3 · Career-Threatening +$3). Someone on every roster is on a $1 minimum contract.
             </dd>
           </div>
           <div>
@@ -139,7 +139,7 @@ export default function AboutPage() {
           After the sixth steal: a short simulation beat, then one screen with everything &mdash; your OVR count-up
           and tier, all six grades, <strong>Best Steal</strong> and <strong>The Reach</strong>, how far you got in
           the boss gauntlet (full game log behind &ldquo;view log&rdquo; for whoever wants it), and the roast. Then
-          Run It Back.
+          Run It Back &mdash; a fresh wheel, a whole new build.
         </p>
       </section>
 

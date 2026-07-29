@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BUCKETS } from "@/data/eras";
+import { DECADE_BUCKETS } from "@/data/eras/decades";
+import { POS_DECADES } from "@/data/positions";
 import { FLAWS } from "@/data/flaws";
 import { formatDailyBlock } from "@/lib/daily";
 import { encodeSteal } from "@/lib/encode";
@@ -10,6 +11,7 @@ import { freshSeed, usePrefersReducedMotion } from "@/lib/hooks";
 import { copyText, h2hUrl, resultText } from "@/lib/share";
 import { playSfx } from "@/lib/sfx";
 import { drawFlaws } from "@/lib/shop";
+import { POS_TOKENS, posBucketFor } from "@/lib/poswheel";
 import { STEAL_BUDGET, WHEEL_AFTER, canAffordSteal, priceIn, simulateSteals } from "@/lib/steal";
 import { maybeRecordBest } from "@/lib/storage";
 import { TIER_HEX, tierFor } from "@/lib/tiers";
@@ -141,11 +143,20 @@ export function StealFlow({
     () => spins.reduce((acc, s) => ({ team: acc.team + s.team, era: acc.era + s.era }), { ...ZERO }),
     [spins]
   );
-  const stolen = useMemo(() => new Set(picks.map(([b, p]) => BUCKETS[b].players[p].person)), [picks]);
+  const positional = target !== "ALL";
+  const bucketOfPick = useCallback(
+    (pick: [number, number], round: number) =>
+      positional ? posBucketFor(seed ?? 0, round, POS_DECADES[pick[0]], target) : DECADE_BUCKETS[pick[0]],
+    [positional, seed, target]
+  );
+  const stolen = useMemo(
+    () => new Set(picks.map((pick, r) => bucketOfPick(pick, r).players[pick[1]].person)),
+    [picks, bucketOfPick]
+  );
   const refund = budgetMode && flawIdx !== null ? FLAWS[flawIdx].refund : 0;
   const spent = useMemo(
-    () => (budgetMode ? picks.reduce((acc, [b, p], r) => acc + priceIn(BUCKETS[b], r, p), 0) : 0),
-    [budgetMode, picks]
+    () => (budgetMode ? picks.reduce((acc, pick, r) => acc + priceIn(bucketOfPick(pick, r), r, pick[1]), 0) : 0),
+    [budgetMode, picks, bucketOfPick]
   );
 
   useEffect(() => {
@@ -180,7 +191,7 @@ export function StealFlow({
     (steals: Array<[number, number]>, withAttempt: number) => {
       if (seed === null) return;
       const build: StealBuild = {
-        v: 4,
+        v: 5,
         mode,
         seed,
         flaw: budgetMode ? (flawIdx ?? 0) : -1,
@@ -204,20 +215,25 @@ export function StealFlow({
 
   const handleRespin = useCallback(
     (kind: "team" | "era") => {
-      if (!canRespin(kind, V4_TOKENS, usedTotal)) return;
+      if (positional) {
+        if (usedTotal.team + usedTotal.era >= POS_TOKENS) return;
+      } else if (!canRespin(kind, V4_TOKENS, usedTotal)) {
+        return;
+      }
       setSpins((prev) => prev.map((s, i) => (i === round ? { ...s, [kind]: s[kind] + 1 } : s)));
     },
-    [usedTotal, round]
+    [positional, usedTotal, round]
   );
 
   const handleSteal = useCallback(
     (bucketIdx: number, playerIdx: number) => {
-      if (stolen.has(BUCKETS[bucketIdx].players[playerIdx].person)) {
+      const bucket = bucketOfPick([bucketIdx, playerIdx], round);
+      if (stolen.has(bucket.players[playerIdx].person)) {
         setToast("Already stolen from. One skill per player.");
         return;
       }
       if (budgetMode) {
-        const price = priceIn(BUCKETS[bucketIdx], round, playerIdx);
+        const price = priceIn(bucket, round, playerIdx);
         if (!canAffordSteal(spent, price, round, refund)) {
           setToast(`Can't afford $${price} — every remaining round still needs a dollar.`);
           return;
@@ -233,7 +249,7 @@ export function StealFlow({
         if (budgetMode && next.length === WHEEL_AFTER) setPhase("wheel");
       }
     },
-    [picks, stolen, budgetMode, round, spent, refund, runSim, attempt]
+    [picks, stolen, budgetMode, round, spent, refund, runSim, attempt, bucketOfPick]
   );
 
   const newRun = useCallback(() => {
@@ -250,14 +266,15 @@ export function StealFlow({
   if (seed === null) return <div className="min-h-[420px]" aria-hidden />;
 
   const code = result ? encodeSteal(result.build) : "";
+  const posChip = positional ? ` · BEST ${target}` : "";
   const modeChip =
     mode === "daily"
-      ? `DAILY #${daily?.number ?? "?"} · ${isOfficialRun ? "OFFICIAL" : "PRACTICE"}`
+      ? `DAILY #${daily?.number ?? "?"}${posChip} · ${isOfficialRun ? "OFFICIAL" : "PRACTICE"}`
       : challenge
-        ? "HEAD TO HEAD"
+        ? `HEAD TO HEAD${posChip}`
         : mode === "budget"
-          ? "BUDGET"
-          : "CLASSIC";
+          ? `BUDGET${posChip}`
+          : `CLASSIC${posChip}`;
   const tierHex = result ? TIER_HEX[tierFor(result.derived.ovr)] : "#f2b94b";
   const budgetLeft = STEAL_BUDGET + refund - spent;
 
@@ -283,7 +300,11 @@ export function StealFlow({
                 </span>
               ) : null}
               <span>
-                RE-SPINS <span className="text-gold">{totalRespinsLeft(V4_TOKENS, usedTotal)}</span> LEFT
+                RE-SPINS{" "}
+                <span className="text-gold">
+                  {positional ? POS_TOKENS - usedTotal.team - usedTotal.era : totalRespinsLeft(V4_TOKENS, usedTotal)}
+                </span>{" "}
+                LEFT
               </span>
             </span>
           </div>
@@ -295,6 +316,7 @@ export function StealFlow({
             spins={spins[round]}
             tokens={V4_TOKENS}
             usedTotal={usedTotal}
+            target={target}
             knowledge={knowledge}
             stolen={stolen}
             budget={budgetMode ? { spent, refund, round } : null}
@@ -329,18 +351,21 @@ export function StealFlow({
             </>
           )}
 
-          {/* RUN IT BACK — the most prominent thing on the screen */}
+          {/* RUN IT BACK — the most prominent thing on the screen: a whole new build */}
           <button
             type="button"
-            onClick={() => runSim(picks, attempt + 1)}
+            onClick={newRun}
             className="mt-4 w-full rounded-xl py-5 font-display text-3xl uppercase tracking-[0.08em] text-ink transition-transform active:scale-[0.99]"
             style={{ background: tierHex, boxShadow: `0 10px 34px ${tierHex}55` }}
           >
-            Run it back
+            {challenge ? "Rematch: same wheel" : "Run it back"}
           </button>
           <p className="mt-1.5 text-center text-[11px] text-dim">
-            Same six steals, fresh variance{official && !isOfficialRun ? " · practice" : ""}
-            {isOfficialRun && official ? " · re-sims are unofficial" : ""}
+            {challenge
+              ? "Same wheel, new build — settle it properly"
+              : mode === "daily"
+                ? "Same daily wheel, new build · practice runs are unofficial"
+                : "Fresh wheel, whole new build"}
           </p>
 
           {mode === "classic" ? (
@@ -370,14 +395,6 @@ export function StealFlow({
           {challenge ? <GauntletAccordion result={result} refreshKey={attempt} /> : null}
 
           <AdSlot id="result-primary" refreshKey={attempt} />
-
-          <button
-            type="button"
-            onClick={newRun}
-            className="mt-2 w-full rounded-lg border border-line py-3 font-display text-lg uppercase tracking-wide text-paper transition-colors hover:border-gold hover:text-gold"
-          >
-            {mode === "daily" ? "New practice run" : challenge ? "Rematch: same wheel" : "New run"}
-          </button>
         </div>
       ) : null}
 

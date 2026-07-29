@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { dailyNumberFor, dailySeed, formatCountdown, formatDailyBlock, msToNextUtcMidnight, utcDateString } from "@/lib/daily";
+import { dailyNumberFor, dailySeed, dailyTargetFor, formatCountdown, formatDailyBlock, msToNextUtcMidnight, utcDateString } from "@/lib/daily";
 import { decodeSteal } from "@/lib/encode";
 import { useMounted } from "@/lib/hooks";
 import { fetchDailyBoard, submitDailyScore, type LbBoard } from "@/lib/leaderboardClient";
@@ -41,7 +41,7 @@ export function DailyShell() {
 
   const today = useMemo(() => {
     const date = utcDateString();
-    return { date, number: dailyNumberFor(date), seed: dailySeed(date) };
+    return { date, number: dailyNumberFor(date), seed: dailySeed(date), target: dailyTargetFor(date) };
   }, []);
 
   useEffect(() => {
@@ -169,6 +169,7 @@ export function DailyShell() {
           ) : null}
           <StealFlow
             mode="daily"
+            target={today.target}
             fixedSeed={today.seed}
             daily={{ number: today.number, date: today.date }}
             official
@@ -196,6 +197,7 @@ export function DailyShell() {
           </div>
           <StealFlow
             mode="daily"
+            target={today.target}
             fixedSeed={today.seed}
             daily={{ number: today.number, date: today.date }}
             startAttempt={1}

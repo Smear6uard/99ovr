@@ -1,4 +1,4 @@
-import { dailyNumberFor, dailySeed } from "@/lib/daily";
+import { dailyNumberFor, dailySeed, dailyTargetFor } from "@/lib/daily";
 import { fnv1a } from "@/lib/rng";
 import { validateSteals } from "@/lib/steal";
 import type { StealBuild, StealResult } from "@/lib/types";
@@ -76,11 +76,12 @@ export function memberInitials(member: string): string {
  * from today's wheel within the run's re-spins (validateSteals covers both).
  */
 export function validateDailySubmission(build: StealBuild, todayStr: string): string | null {
-  if (build.v !== 4 || build.mode !== "daily") return "not a daily build";
+  // v4 stays accepted through the v5 cutover — stale clients submit v4 codes
+  if ((build.v !== 4 && build.v !== 5) || build.mode !== "daily") return "not a daily build";
   if (build.attempt !== 0) return "not an official attempt";
   if (build.daily !== dailyNumberFor(todayStr)) return "not today's daily";
   if (build.seed !== dailySeed(todayStr)) return "seed mismatch";
-  if ((build.target ?? "ALL") !== "ALL") return "daily has no build target";
+  if ((build.target ?? "ALL") !== dailyTargetFor(todayStr)) return "wrong daily target";
   if (build.flaw !== -1) return "daily has no flaw";
   if (!validateSteals(build)) return "illegal run";
   return null;

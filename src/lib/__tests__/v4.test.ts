@@ -6,6 +6,7 @@ import { decodeSteal, encodeSteal } from "@/lib/encode";
 import { mulberry32, rngInt } from "@/lib/rng";
 import {
   STEAL_BUDGET,
+  STEAL_BUDGET_V4,
   WHEEL_AFTER,
   budgetCapAt,
   canAffordSteal,
@@ -83,13 +84,16 @@ describe("v4 pricing", () => {
   });
 
   it("forces every pick to leave a dollar per remaining round", () => {
-    // round 0: cap 20, five rounds remain after it
+    // v5 wallet ($15): round 0 leaves five dollars for five rounds
     expect(canAffordSteal(0, 5, 0, 0)).toBe(true);
-    expect(canAffordSteal(12, 4, 0, 0)).toBe(false);
+    expect(canAffordSteal(7, 4, 0, 0)).toBe(false);
     // last round: whole remaining wallet is spendable
-    expect(canAffordSteal(15, 5, 5, 0)).toBe(true);
-    expect(canAffordSteal(16, 5, 5, 0)).toBe(false);
-    expect(canAffordSteal(16, 5, 5, 1)).toBe(true);
+    expect(canAffordSteal(10, 5, 5, 0)).toBe(true);
+    expect(canAffordSteal(11, 5, 5, 0)).toBe(false);
+    expect(canAffordSteal(11, 5, 5, 1)).toBe(true);
+    // v4 codes keep the frozen $20 wallet
+    expect(canAffordSteal(15, 5, 5, 0, STEAL_BUDGET_V4)).toBe(true);
+    expect(canAffordSteal(16, 5, 5, 0, STEAL_BUDGET_V4)).toBe(false);
   });
 });
 

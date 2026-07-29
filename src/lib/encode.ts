@@ -129,7 +129,7 @@ function decodeV2(bytes: Uint8Array): BuildCode | null {
  *   23     xor checksum
  */
 export function encodeSteal(build: StealBuild): string {
-  if (build.v === 4) return encodeStealV4(build);
+  if (build.v >= 4) return encodeStealV4(build);
   const bytes = new Uint8Array(V3_BYTES);
   bytes[0] = 3;
   bytes[1] = (build.mode === "daily" ? 1 : 0) | (build.knowledge ? 0x80 : 0);
@@ -153,7 +153,7 @@ export function encodeSteal(build: StealBuild): string {
 export function decodeSteal(code: string): StealBuild | null {
   const bytes = fromBase64Url(code);
   if (!bytes) return null;
-  if (bytes[0] === 4 && bytes.length === V4_BYTES) return decodeStealV4(bytes);
+  if ((bytes[0] === 4 || bytes[0] === 5) && bytes.length === V4_BYTES) return decodeStealV4(bytes);
   if (bytes[0] !== 3 || bytes.length !== V3_BYTES) return null;
   if (checksum(bytes, 23) !== bytes[23]) return null;
   const flags = modeFrom(bytes[1]);
@@ -176,8 +176,9 @@ export function decodeSteal(code: string): StealBuild | null {
 /* ------------------------------------------------------------------ */
 
 /**
- * 25 bytes → 34 base64url chars.
- *   0      version = 4
+ * 25 bytes → 34 base64url chars. v5 is byte-identical except the version
+ * byte — its steal indices address the decade pool instead of the era pool.
+ *   0      version = 4 · 5
  *   1      mode (0 classic · 1 daily · 2 budget) | knowledge << 7
  *   2      build target (0 ALL · 1–5 PG…C)
  *   3–6    seed (u32)
@@ -189,7 +190,7 @@ export function decodeSteal(code: string): StealBuild | null {
  */
 function encodeStealV4(build: StealBuild): string {
   const bytes = new Uint8Array(V4_BYTES);
-  bytes[0] = 4;
+  bytes[0] = build.v;
   const modeIdx = V4_MODES.indexOf(build.mode as (typeof V4_MODES)[number]);
   bytes[1] = (modeIdx < 0 ? 0 : modeIdx) | (build.knowledge ? 0x80 : 0);
   bytes[2] = Math.max(0, POSITION_BYTES.indexOf(build.target ?? "ALL"));
@@ -218,7 +219,7 @@ function decodeStealV4(bytes: Uint8Array): StealBuild | null {
   const steals: Array<[number, number]> = [];
   for (let i = 0; i < ROUNDS; i++) steals.push([bytes[8 + i * 2], bytes[9 + i * 2]]);
   const build: StealBuild = {
-    v: 4,
+    v: bytes[0] as 4 | 5,
     mode,
     knowledge: (bytes[1] & 0x80) !== 0,
     target,

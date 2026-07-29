@@ -1,0 +1,70 @@
+import { pp, type PosDraft } from "@/data/positions/authoring";
+
+/**
+ * 1970s position pool. Short shorts, no shot clock mercy, and a rival league
+ * paying cash for flair. Bigs mostly cannot shoot — the skyhook is finishing,
+ * not a jumpshot — while ABA imports arrive with handles and hangtime the NBA
+ * had not budgeted for. Guards shoot better than the 60s and worse than the 90s.
+ * ORDER IS FROZEN — see authoring.ts.
+ */
+export const SEVENTIES_POOL: PosDraft[] = [
+  // ---- Guards ----
+  pp("Walt Frazier", "23.2 PPG · 7.0 APG · Clyde", "Stole the ball in Game 7 and the mink coat in every other frame.", [80, 90, 76, 88, 96, 80], ["PG", "SG"]),
+  pp("Pete Maravich", "31.1 PPG · scoring title, 1977", "Pistol did things nobody asked for and nobody forgot. Defense was optional.", [90, 98, 72, 92, 44, 76], ["PG", "SG"]),
+  pp("Nate Archibald", "34.0 PPG · 11.4 APG", "Tiny led the league in points and assists in the same season. Nobody has since.", [74, 92, 78, 96, 52, 88], ["PG"]),
+  pp("Jo Jo White", "18.1 PPG · 488 straight games", "Two rings, one triple-overtime masterpiece, zero nights off.", [84, 76, 68, 78, 74, 78], ["PG", "SG"]),
+  pp("Norm Van Lier", "11.9 PPG · 6.5 APG", "Stormin' Norman took the charge before the charge was invented.", [62, 72, 54, 84, 94, 66], ["PG"]),
+  pp("Don Buse", "8.5 APG · 3.5 SPG, led both", "Led the NBA in assists and steals the same year and nobody noticed.", [68, 66, 48, 86, 94, 60], ["PG", "SG"]),
+  pp("Calvin Murphy", "25.6 PPG · 92% FT · 5'9\"", "Smallest man in the building and the last one you wanted to foul.", [92, 88, 60, 76, 66, 72], ["PG"]),
+  pp("Gail Goodrich", "25.9 PPG on the 33-game streak", "Left-handed leading scorer on the winningest team ever assembled.", [88, 80, 68, 74, 50, 66], ["PG", "SG"]),
+  pp("Earl Monroe", "20.7 PPG · Black Jesus", "Playground spin move in a league that had no scouting report for it.", [80, 96, 76, 72, 56, 70], ["PG", "SG"]),
+  pp("Randy Smith", "21.8 PPG · 906 straight games", "Iron man out of Buffalo State. Never sat, never slowed down.", [76, 78, 74, 76, 68, 92], ["PG", "SG"]),
+  pp("Kevin Porter", "13.4 APG · single-season record", "Set an assist record that stood a decade. Also led the league in turnovers. Fair trade.", [52, 84, 60, 96, 54, 76], ["PG"]),
+  pp("Dennis Johnson", "15.9 PPG · 1979 Finals MVP", "Went 0-for-14 in a Finals game one year and won the whole thing the next.", [64, 76, 78, 74, 94, 86], ["PG", "SG"]),
+  pp("Slick Watts", "13.0 PPG · 8.1 APG · 3.2 SPG", "Headband, shaved head, led the league in steals and assists. Seattle never got over it.", [48, 74, 52, 86, 90, 74], ["PG"]),
+  pp("Lenny Wilkens", "17.7 PPG · 9.1 APG", "Ran the offense while coaching the team. Both jobs, same paycheck.", [64, 76, 66, 88, 74, 60], ["PG"]),
+  pp("Ernie DiGregorio", "15.2 PPG · 8.2 APG · 1974 ROY", "Ernie D threw passes nobody could catch and guarded nobody at all.", [78, 82, 50, 92, 32, 44], ["PG"]),
+  pp("Louie Dampier", "794 ABA threes · 4.5 APG", "The all-time ABA leader in everything, playing a shot the NBA hadn't approved yet.", [92, 74, 52, 82, 54, 54], ["PG", "SG"]),
+  pp("Quinn Buckner", "1976 Olympic gold · 2.0 SPG", "Won at every level. Made the shot only when the shot clock made him.", [42, 68, 60, 76, 90, 74], ["PG"]),
+  pp("George Gervin", "27.2 PPG · scoring title, 1978", "The Iceman clinched a scoring title with 63 in a half. Nothing showed on his face.", [90, 78, 90, 56, 48, 82], ["SG", "SF"]),
+  pp("David Thompson", "27.2 PPG · 73 in the finale", "Skywalker. A 44-inch vertical in Converse and a scoring title lost by two points.", [86, 76, 88, 54, 60, 97], ["SG", "SF"]),
+  pp("Phil Chenier", "21.9 PPG · hardship draft", "Left Cal early, arrived in Washington already finished as a shooter.", [86, 68, 66, 58, 74, 72], ["SG"]),
+  pp("Lou Hudson", "26.8 PPG · Sweet Lou", "Six straight All-Star years in Atlanta. Ask anyone under 40 who he was.", [88, 72, 70, 58, 58, 74], ["SG", "SF"]),
+  pp("World B. Free", "28.8 PPG · All-World", "Legally changed his name to World. Then shot like he owned it.", [80, 84, 78, 46, 40, 88], ["SG"]),
+  pp("Doug Collins", "20.8 PPG · first pick, 1973", "Made the free throws that beat the Soviets. The refs disagreed.", [84, 72, 76, 60, 62, 78], ["SG"]),
+  pp("John Havlicek", "28.9 PPG · 9.0 RPG · 7.5 APG", "Hondo never stopped moving for sixteen years. The lungs were the talent.", [80, 76, 78, 84, 84, 82], ["SG", "SF"]),
+  pp("Fred Brown", "23.1 PPG · Downtown", "Named for where he shot from, in a league with no reward for it.", [92, 66, 54, 58, 48, 60], ["SG"]),
+  // ---- Forwards ----
+  pp("Julius Erving", "29.3 PPG · 11.0 RPG, ABA", "Dr. J took off from the foul line and dragged the whole league into the air with him.", [66, 90, 96, 80, 82, 98], ["SF", "PF"]),
+  pp("Rick Barry", "30.6 PPG · 90% FT underhand", "Shot granny-style, insulted everyone, made every free throw. Priorities in order.", [94, 80, 78, 88, 70, 68], ["SF"]),
+  pp("Jamaal Wilkes", "17.7 PPG · Silk", "The ugliest release in the league and the softest results.", [84, 70, 74, 56, 76, 74], ["SF", "PF"]),
+  pp("Bobby Jones", "15.1 PPG · 60% FG", "Guarded the other team's best player every night for a decade and never fouled out of the conversation.", [58, 58, 84, 62, 96, 88], ["SF", "PF"]),
+  pp("Bobby Dandridge", "21.5 PPG · two rings, two teams", "Won a title next to Kareem, then another as the first option. Still not in the building.", [84, 68, 76, 56, 76, 72], ["SF", "PF"]),
+  pp("Chet Walker", "22.0 PPG · Chet the Jet", "Drew fouls like rent was due. Seven All-Star trips, zero highlights preserved.", [82, 74, 78, 58, 58, 62], ["SF", "PF"]),
+  pp("Sidney Wicks", "24.5 PPG · 11.5 RPG · 1972 ROY", "Rookie of the Year with four straight All-Star nods, then a long argument with everyone.", [58, 60, 78, 60, 58, 82], ["SF", "PF"]),
+  pp("George McGinnis", "29.8 PPG · 14.3 RPG, ABA", "Palmed the ball with one hand and shot it that way too. Co-MVP anyway.", [64, 72, 86, 76, 72, 88], ["SF", "PF"]),
+  pp("Spencer Haywood", "29.2 PPG · 12.9 RPG", "Sued the NBA for the right to be there at 21 and won. The league still owes him.", [76, 60, 86, 50, 76, 90], ["SF", "PF"]),
+  pp("Marques Johnson", "25.6 PPG · 7.5 RPG", "Point forward in Milwaukee before the phrase existed.", [72, 74, 88, 66, 70, 90], ["SF"]),
+  pp("Adrian Dantley", "20.3 PPG · 1977 ROY", "Six-five, built low, lived at the foul line. Never once dunked when a pivot would do.", [70, 74, 92, 48, 46, 62], ["SF"]),
+  pp("Rudy Tomjanovich", "24.5 PPG · five All-Star years", "Remembered for the punch he took. Should be remembered for the jumper.", [88, 56, 70, 46, 52, 62], ["SF"]),
+  pp("Billy Knight", "26.6 PPG · 52% FG", "Scored 26 a night in Indiana and got exactly one All-Star nod for it.", [86, 70, 76, 56, 48, 76], ["SF"]),
+  pp("Elvin Hayes", "21.4 PPG · 18.1 RPG", "The Big E's turnaround came from the same spot every time. Still nobody stopped it.", [78, 48, 84, 44, 88, 84], ["PF", "C"]),
+  pp("Bob McAdoo", "34.5 PPG · 14.1 RPG · 1975 MVP", "A seven-footer with a jumpshot in 1975. The league filed it under witchcraft.", [88, 56, 88, 50, 66, 82], ["PF", "C"]),
+  pp("Dave Cowens", "20.5 PPG · 16.2 RPG · 1973 MVP", "Undersized redhead who drove a cab in the offseason and dove on every loose ball in season.", [76, 62, 80, 72, 90, 88], ["PF", "C"]),
+  pp("Truck Robinson", "22.7 PPG · 15.7 RPG", "Led the league in rebounds the year the league stopped caring about rebounds.", [50, 42, 78, 40, 74, 76], ["PF", "C"]),
+  pp("Maurice Lucas", "16.4 PPG · 9.2 RPG", "The Enforcer. Portland's title run started when he took a swing at Darryl Dawkins.", [66, 50, 80, 52, 84, 76], ["PF", "C"]),
+  pp("Paul Silas", "10.6 PPG · 12.3 RPG", "Scored nothing, boxed out everything, has three rings on two coasts.", [36, 38, 58, 50, 88, 64], ["PF", "C"]),
+  pp("Happy Hairston", "13.1 PPG · 13.1 RPG", "Rebounded so Wilt could stand still. Thirty-three straight wins agreed with the plan.", [52, 44, 70, 40, 74, 70], ["PF"]),
+  pp("Jack Sikma", "15.6 PPG · 12.4 RPG", "Blond perm, reverse pivot, a jumper no other center was allowed to have.", [76, 46, 74, 58, 80, 58], ["PF", "C"]),
+  pp("Dan Issel", "30.6 PPG · ABA Rookie of the Year", "The Horse ran the floor for fifteen years and missed nine games doing it.", [80, 54, 84, 48, 62, 66], ["PF", "C"]),
+  // ---- Centers ----
+  pp("Kareem Abdul-Jabbar", "34.8 PPG · 16.6 RPG · 1972 MVP", "The skyhook was unblockable for twenty years. Nobody else ever bothered learning it.", [72, 60, 97, 74, 94, 86], ["C"]),
+  pp("Bill Walton", "18.6 PPG · 14.4 RPG · 3.2 BPG", "Passed like a point guard, defended like a wall, and had feet made of glass.", [58, 52, 86, 92, 96, 74], ["C"]),
+  pp("Artis Gilmore", "23.8 PPG · 17.8 RPG, ABA", "The A-Train. Highest field goal percentage in history and the afro to match.", [40, 38, 90, 44, 92, 84], ["C"]),
+  pp("Bob Lanier", "22.5 PPG · 13.3 RPG · size 22", "Left-handed touch out to eighteen feet on a body that kept betraying him.", [82, 58, 88, 66, 78, 66], ["C"]),
+  pp("Wes Unseld", "10.8 PPG · 14.0 RPG", "Never scored. Won MVP as a rookie anyway. The outlet pass was the offense.", [46, 42, 66, 84, 92, 66], ["C"]),
+  pp("Nate Thurmond", "first quadruple-double, 1974", "22, 14, 13 and 12 blocks. Then he went home and said nothing about it.", [52, 40, 70, 52, 96, 80], ["C"]),
+  pp("Willis Reed", "21.7 PPG · 13.9 RPG · 1970 MVP", "Limped out of the tunnel, hit two jumpers, never needed to score again.", [74, 44, 82, 50, 88, 70], ["C"]),
+  pp("Clifford Ray", "9.4 PPG · 9.5 RPG", "Set the screens that won Golden State a title. Later pulled a hook out of a dolphin's stomach. Both true.", [30, 34, 56, 44, 82, 66], ["C"]),
+  pp("Caldwell Jones", "9.6 PPG · 2.9 BPG", "Blocked shots for four different leagues' worth of teams and never averaged a headline.", [42, 32, 60, 38, 92, 74], ["C"]),
+];

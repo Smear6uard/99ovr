@@ -1,29 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { EraCard, TeamWheel } from "@/components/TeamWheel";
+import { EraCard, TeamWheel, type ReelMask } from "@/components/TeamWheel";
 import { RosterCard } from "@/components/RosterCard";
 import { usePrefersReducedMotion } from "@/lib/hooks";
 import { buzz, playSfx } from "@/lib/sfx";
-import { BUCKETS } from "@/data/eras";
-import { ROUNDS, bucketIndexAt, canRespin, respinsLeft, type SpinsUsed, type Tokens } from "@/lib/wheel";
-import { ATTRS, ATTR_LABELS, type AttrId } from "@/lib/types";
+import { POS_DECADES } from "@/data/positions";
+import { MAX_POS_SPINS, POS_TOKENS, posBucketAt } from "@/lib/poswheel";
+import { DECADE_POOL, ROUNDS, bucketIndexAt, canRespin, eraCountAt, respinsLeft, type SpinsUsed, type Tokens } from "@/lib/wheel";
+import { ATTRS, ATTR_LABELS, type AttrId, type PositionMode } from "@/lib/types";
 
 type Reel = "idle" | "spinning" | "landed";
 
 const SPIN_MS = 1900;
+const BOTH: ReelMask = { left: true, right: true };
 
 function RespinButton({
   label,
   hint,
   left,
   enabled,
+  disabledHint = "SPENT",
   onClick,
 }: {
   label: string;
   hint: string;
   left: number;
   enabled: boolean;
+  disabledHint?: string;
   onClick: () => void;
 }) {
   return (
@@ -37,7 +41,7 @@ function RespinButton({
     >
       <span className="block text-[11px] font-bold tracking-[0.14em]">{label}</span>
       <span className="mt-0.5 block text-[9px] tracking-[0.1em] text-dim">
-        {enabled ? `${left} LEFT · ${hint}` : "SPENT"}
+        {enabled ? `${left} LEFT · ${hint}` : disabledHint}
       </span>
     </button>
   );
@@ -45,7 +49,9 @@ function RespinButton({
 
 /**
  * One of the six rounds: spin → land → read the roster → steal.
- * The reel is cosmetic; `bucketAt` decides the landing before it ever moves.
+ * The reel is cosmetic; the wheel math decides the landing before it ever
+ * moves. Classic spins franchise decades; positional runs spin a decade of
+ * the build's position and deal a seeded twelve.
  */
 export function StealRound({
   round,
@@ -53,6 +59,7 @@ export function StealRound({
   spins,
   tokens,
   usedTotal,
+  target,
   knowledge,
   stolen,
   budget,
@@ -66,6 +73,7 @@ export function StealRound({
   tokens: Tokens;
   /** re-spins spent across the whole run so far */
   usedTotal: SpinsUsed;
+  target: PositionMode;
   knowledge: boolean;
   stolen: Set<string>;
   /** Budget mode wallet, or null everywhere else */
@@ -75,13 +83,16 @@ export function StealRound({
 }) {
   const reduced = usePrefersReducedMotion();
   const [reel, setReel] = useState<Reel>("idle");
+  const [mask, setMask] = useState<ReelMask>(BOTH);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spinKey = `${round}:${spins.team}:${spins.era}`;
   const previousKey = useRef(spinKey);
 
+  const positional = target !== "ALL";
   const attr: AttrId = ATTRS[round];
-  const bucketIdx = bucketIndexAt(seed, round, spins.team, spins.era);
-  const bucket = BUCKETS[bucketIdx];
+  const bucketIdx = positional ? -1 : bucketIndexAt(seed, round, spins.team, spins.era, DECADE_POOL);
+  const bucket = positional ? posBucketAt(seed, round, spins.team, target) : DECADE_POOL.buckets[bucketIdx];
+  const previousBucket = useRef(bucket);
 
   const land = () => {
     setReel("landed");
@@ -90,23 +101,29 @@ export function StealRound({
     buzz(bucket.vibe === "iconic" ? [24, 40, 24, 40, 60] : [18, 30, 40]);
   };
 
-  const start = () => {
+  const start = (nextMask: ReelMask = BOTH) => {
     if (timer.current) clearTimeout(timer.current);
+    previousBucket.current = bucket;
     if (reduced) {
       setReel("landed");
       return;
     }
+    setMask(nextMask);
     playSfx("spin");
     buzz(35);
     setReel("spinning");
     timer.current = setTimeout(land, SPIN_MS);
   };
 
-  // a re-spin re-arms the reel without a second tap — the token is already gone
+  // a re-spin re-arms the reel without a second tap — the token is already
+  // gone. Only the reel whose value actually changed gets to move again.
   useEffect(() => {
     if (previousKey.current === spinKey) return;
     previousKey.current = spinKey;
-    start();
+    const prev = previousBucket.current;
+    const left = positional ? true : prev.franchise !== bucket.franchise;
+    const right = positional ? false : prev.decade !== bucket.decade;
+    start(left || right ? { left, right } : BOTH);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinKey]);
 
@@ -119,6 +136,8 @@ export function StealRound({
 
   const teamLeft = respinsLeft("team", tokens, usedTotal);
   const eraLeft = respinsLeft("era", tokens, usedTotal);
+  const eraCount = positional ? 0 : eraCountAt(seed, round, spins.team, DECADE_POOL);
+  const posLeft = POS_TOKENS - usedTotal.team - usedTotal.era;
 
   return (
     <section className="flex min-h-[62vh] flex-col pt-4">
@@ -127,7 +146,7 @@ export function StealRound({
           ROUND {round + 1} / {ROUNDS} · {ATTR_LABELS[attr].toUpperCase()}
         </span>
         <h1 className="mt-1 font-display text-[38px] uppercase leading-none text-paper">
-          {reel === "landed" ? "Steal one" : reel === "spinning" ? "Spinning…" : "Spin the era"}
+          {reel === "landed" ? "Steal one" : reel === "spinning" ? "Spinning…" : positional ? "Spin the decade" : "Spin the era"}
         </h1>
       </div>
 
@@ -140,22 +159,33 @@ export function StealRound({
             </p>
           ) : null}
 
-          <div className="flex gap-2">
+          {positional ? (
             <RespinButton
-              label="TEAM RE-SPIN"
-              hint="ANY TEAM"
-              left={teamLeft}
-              enabled={canRespin("team", tokens, usedTotal)}
+              label="DECADE RE-SPIN"
+              hint="NEW DECADE"
+              left={posLeft}
+              enabled={posLeft > 0 && spins.team < MAX_POS_SPINS}
               onClick={() => onRespin("team")}
             />
-            <RespinButton
-              label="ERA RE-SPIN"
-              hint={`ANOTHER ${bucket.team}`}
-              left={eraLeft}
-              enabled={canRespin("era", tokens, usedTotal)}
-              onClick={() => onRespin("era")}
-            />
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <RespinButton
+                label="TEAM RE-SPIN"
+                hint="ANY TEAM"
+                left={teamLeft}
+                enabled={canRespin("team", tokens, usedTotal)}
+                onClick={() => onRespin("team")}
+              />
+              <RespinButton
+                label="ERA RE-SPIN"
+                hint={`ANOTHER ${bucket.team} ERA`}
+                left={eraLeft}
+                enabled={canRespin("era", tokens, usedTotal) && eraCount > 1}
+                disabledHint={eraCount > 1 ? "SPENT" : `ONLY ${bucket.team} ERA`}
+                onClick={() => onRespin("era")}
+              />
+            </div>
+          )}
 
           <RosterCard
             bucket={bucket}
@@ -163,21 +193,30 @@ export function StealRound({
             knowledge={knowledge}
             stolen={stolen}
             budget={budget}
-            onSteal={(playerIdx) => onSteal(bucketIdx, playerIdx)}
+            onSteal={(playerIdx) =>
+              onSteal(positional ? POS_DECADES.indexOf(bucket.decade as (typeof POS_DECADES)[number]) : bucketIdx, playerIdx)
+            }
           />
         </div>
       ) : (
         <>
           <div className="flex flex-1 items-center justify-center py-6">
             <div className="w-full max-w-[300px]">
-              <TeamWheel bucket={bucket} spinning={reel === "spinning"} round={round} reduced={reduced} />
+              <TeamWheel
+                bucket={bucket}
+                spinning={reel === "spinning"}
+                round={round}
+                reduced={reduced}
+                mask={mask}
+                position={positional ? target : null}
+              />
             </div>
           </div>
 
           <div className="mt-auto pb-2">
             <button
               type="button"
-              onClick={start}
+              onClick={() => start(BOTH)}
               disabled={reel === "spinning"}
               className={`spin-lever w-full rounded-xl border-b-4 border-[#a97b22] py-4 font-display text-3xl uppercase tracking-[0.1em] text-ink shadow-[0_10px_30px_rgba(242,185,75,0.32)] transition-transform active:translate-y-[3px] active:border-b-0 ${
                 reel === "spinning" ? "pulse-soft cursor-default bg-gold/70" : "bg-gold"
@@ -188,7 +227,9 @@ export function StealRound({
             <p className="mt-2 text-center text-[11px] text-dim">
               {reel === "spinning"
                 ? "Wherever it lands, that roster is your only shot at this skill."
-                : `One team-era. One ${ATTR_LABELS[attr].toLowerCase()}. Whoever's on it.`}
+                : positional
+                  ? `One decade of ${target}s. One ${ATTR_LABELS[attr].toLowerCase()}. Twelve names.`
+                  : `One team-era. One ${ATTR_LABELS[attr].toLowerCase()}. Whoever's on it.`}
             </p>
           </div>
         </>

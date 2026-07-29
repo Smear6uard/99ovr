@@ -145,22 +145,22 @@ export type Steal = {
 };
 
 /**
- * v4 mode set. `classic` is the setup-sheet sandbox, `budget` the $20 run
+ * v4 mode set. `classic` is the setup-sheet sandbox, `budget` the priced run
  * with the mid-run weakness wheel. v3 codes carry "sandbox" | "daily".
  */
 export type StealMode = "classic" | "daily" | "budget";
 export type StealGameMode = GameMode | StealMode;
 
-/** The encodable spin-steal run — v3 (flaw economy) or v4 (four modes). */
+/** The encodable spin-steal run — v3 (flaw economy), v4 (four modes), v5 (decade wheel). */
 export type StealBuild = {
-  v: 3 | 4;
+  v: 3 | 4 | 5;
   mode: StealGameMode;
   seed: number;
   /** index into FLAWS · −1 in v4 classic/daily (no flaw outside Budget) */
   flaw: number;
   /** v4 build target — "ALL" is BEST PLAYER, else the positional challenge. v3 omits it. */
   target?: PositionMode;
-  /** [bucketIdx, playerIdx] per round, in ATTRS order */
+  /** [bucketIdx, playerIdx] per round, in ATTRS order — indices into poolFor(v) */
   steals: Array<[number, number]>;
   attempt: number;
   daily: number;

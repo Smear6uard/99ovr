@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { BUCKETS } from "@/data/eras";
 import { decodeSteal, encodeSteal } from "@/lib/encode";
 import { canAffordSteal, priceIn, simulateSteals } from "@/lib/steal";
-import { ROUNDS, bucketIndexAt } from "@/lib/wheel";
+import { DECADE_POOL, ROUNDS, bucketIndexAt } from "@/lib/wheel";
 import { ATTR_LABELS, ATTRS, type StealBuild } from "@/lib/types";
 import { StealFlow } from "@/components/StealFlow";
 
@@ -48,8 +47,8 @@ async function playClassicRun(opts: { knowledge?: boolean } = {}) {
     // every round is its own gamble — you must pull the lever
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
-    const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
-    const bucket = BUCKETS[bucketIdx];
+    const bucketIdx = bucketIndexAt(SEED, round, 0, 0, DECADE_POOL);
+    const bucket = DECADE_POOL.buckets[bucketIdx];
     expect(screen.getAllByText(bucket.label).length).toBeGreaterThan(0);
 
     const best = bucket.players
@@ -91,7 +90,7 @@ describe("a full Classic run", () => {
 
     // the result matches an independent simulation of the same run
     const expectedResult = simulateSteals({
-      v: 4, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      v: 5, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
       steals: expected, attempt: 0, daily: 0, knowledge: false,
     });
     expect(expectedResult).not.toBeNull();
@@ -104,7 +103,7 @@ describe("a full Classic run", () => {
 
   it("never offers the same player twice across a run", async () => {
     const expected = await playClassicRun();
-    const people = expected.map(([b, p]) => BUCKETS[b].players[p].person);
+    const people = expected.map(([b, p]) => DECADE_POOL.buckets[b].players[p].person);
     expect(new Set(people).size).toBe(people.length);
   });
 
@@ -112,7 +111,7 @@ describe("a full Classic run", () => {
     const expected = await playClassicRun();
     await waitSim();
     const rebuilt = simulateSteals({
-      v: 4, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      v: 5, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
       steals: expected, attempt: 0, daily: 0, knowledge: false,
     })!;
     const code = encodeSteal(rebuilt.build);
@@ -142,8 +141,8 @@ describe("a full Budget run", () => {
       }
 
       await click(screen.getByRole("button", { name: /^spin$/i }));
-      const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
-      const bucket = BUCKETS[bucketIdx];
+      const bucketIdx = bucketIndexAt(SEED, round, 0, 0, DECADE_POOL);
+      const bucket = DECADE_POOL.buckets[bucketIdx];
       const refund = flawIdx >= 0 ? (await import("@/data/flaws")).FLAWS[flawIdx].refund : 0;
       const pick = bucket.players
         .map((player, index) => ({ player, index, price: priceIn(bucket, round, index) }))
@@ -169,13 +168,16 @@ describe("a full Budget run", () => {
     expect(screen.getByText("Run it back")).toBeTruthy();
     // the card carries flaw + refund and the budget receipt
     const build: StealBuild = {
-      v: 4, mode: "budget", seed: SEED, flaw: flawIdx, target: "ALL",
+      v: 5, mode: "budget", seed: SEED, flaw: flawIdx, target: "ALL",
       steals, attempt: 0, daily: 0, knowledge: false,
     };
     const result = simulateSteals(build)!;
     expect(result.spent).toBe(spent);
     expect(screen.getByText(new RegExp(`\\$${spent} spent of`))).toBeTruthy();
     expect(screen.getAllByText(result.flaw!.name).length).toBeGreaterThan(0);
+    // budget faces the same boss gauntlet classic does
+    expect(screen.getByText(/VIEW LOG/i)).toBeTruthy();
+    expect(screen.getByText(/cleared all 10 rounds|fell in round/i)).toBeTruthy();
     // budget runs never mint H2H challenges
     expect(screen.queryByText(/challenge a friend/i)).toBeNull();
   });
@@ -187,7 +189,7 @@ describe("Ball Knowledge", () => {
     render(<StealFlow mode="classic" fixedSeed={SEED} knowledge />);
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
-    const bucket = BUCKETS[bucketIndexAt(SEED, 0, 0, 0)];
+    const bucket = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 0, 0, DECADE_POOL)];
     const list = screen.getByRole("list");
     for (const player of bucket.players) {
       expect(within(list).getByText(player.name)).toBeTruthy();
@@ -212,8 +214,8 @@ describe("re-spins", () => {
     render(<StealFlow mode="classic" fixedSeed={SEED} />);
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
-    const before = BUCKETS[bucketIndexAt(SEED, 0, 0, 0)];
-    const afterTeam = BUCKETS[bucketIndexAt(SEED, 0, 1, 0)];
+    const before = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 0, 0, DECADE_POOL)];
+    const afterTeam = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 1, 0, DECADE_POOL)];
     expect(screen.getAllByText(before.label).length).toBeGreaterThan(0);
 
     await click(screen.getByRole("button", { name: /team re-spin/i }));
@@ -224,7 +226,7 @@ describe("re-spins", () => {
     const eraButton = screen.getByRole("button", { name: /era re-spin/i });
     expect(eraButton).toHaveProperty("disabled", false);
     await click(eraButton);
-    const afterEra = BUCKETS[bucketIndexAt(SEED, 0, 1, 1)];
+    const afterEra = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 1, 1, DECADE_POOL)];
     expect(afterEra.franchise).toBe(afterTeam.franchise);
     expect(afterEra.id).not.toBe(afterTeam.id);
     expect(screen.getAllByText(afterEra.label).length).toBeGreaterThan(0);
@@ -239,8 +241,8 @@ describe("Head to Head", () => {
     const taken = new Set<string>();
     const steals: Array<[number, number]> = [];
     for (let round = 0; round < ROUNDS; round++) {
-      const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
-      const bucket = BUCKETS[bucketIdx];
+      const bucketIdx = bucketIndexAt(SEED, round, 0, 0, DECADE_POOL);
+      const bucket = DECADE_POOL.buckets[bucketIdx];
       const worst = bucket.players
         .map((player, index) => ({ player, index }))
         .filter(({ player }) => !taken.has(player.person))
@@ -249,7 +251,7 @@ describe("Head to Head", () => {
       steals.push([bucketIdx, worst.index]);
     }
     const challenger = simulateSteals({
-      v: 4, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      v: 5, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
       steals, attempt: 0, daily: 0, knowledge: false,
     })!;
 
@@ -258,8 +260,8 @@ describe("Head to Head", () => {
     const mine = new Set<string>();
     for (let round = 0; round < ROUNDS; round++) {
       await click(screen.getByRole("button", { name: /^spin$/i }));
-      const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
-      const bucket = BUCKETS[bucketIdx];
+      const bucketIdx = bucketIndexAt(SEED, round, 0, 0, DECADE_POOL);
+      const bucket = DECADE_POOL.buckets[bucketIdx];
       const best = bucket.players
         .map((player, index) => ({ player, index }))
         .filter(({ player }) => !mine.has(player.person))

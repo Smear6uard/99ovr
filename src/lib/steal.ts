@@ -1,11 +1,12 @@
-import { BUCKETS } from "@/data/eras";
 import { FLAWS } from "@/data/flaws";
 import { GAUNTLET, POSITION_GAUNTLETS } from "@/data/gauntlet";
 import { ARCHETYPES } from "@/data/archetypes";
+import { POS_DECADES } from "@/data/positions";
+import { POS_TOKENS, minSpinsForPosDecade, posBucketFor } from "@/lib/poswheel";
 import { fnv1a, mulberry32 } from "@/lib/rng";
 import { bandFor, curve, pickRoast, runGauntlet } from "@/lib/sim";
 import { gradeFor, gradeScore, verdictFor } from "@/lib/grade";
-import { ROUNDS, V4_TOKENS, minSpinsFor, spinsAffordable, tokensFor } from "@/lib/wheel";
+import { ROUNDS, V4_TOKENS, minSpinsFor, poolFor, spinsAffordable, tokensFor } from "@/lib/wheel";
 import {
   ATTRS,
   ATTR_LABELS,
@@ -14,6 +15,8 @@ import {
   type AttrId,
   type EraBucket,
   type EraPlayer,
+  type Flaw,
+  type Position,
   type PositionMode,
   type Price,
   type Steal,
@@ -68,8 +71,19 @@ function activeSynergies(ratings: Record<AttrId, number>, steals: Steal[]): Stea
 /* Budget mode — prices                                                */
 /* ------------------------------------------------------------------ */
 
-/** The whole run's wallet. Flaw severity refunds land after the wheel. */
-export const STEAL_BUDGET = 20;
+/** The whole run's wallet (v5). Flaw severity refunds land after the wheel. */
+export const STEAL_BUDGET = 15;
+/** v4 wallet, frozen — old budget codes must keep validating and displaying. */
+export const STEAL_BUDGET_V4 = 20;
+export const stealBudgetFor = (v: number): number => (v >= 5 ? STEAL_BUDGET : STEAL_BUDGET_V4);
+
+/**
+ * v4 refunds, frozen by severity (FLAWS[].refund now carries the v5 scale,
+ * where even a mild weakness pays $1 and the worst pay $3).
+ */
+const V4_REFUNDS: Record<Flaw["severity"], number> = { Mild: 0, Bad: 1, Brutal: 2, "Career-Threatening": 3 };
+export const flawRefundFor = (flaw: Flaw, v: number): number => (v >= 5 ? flaw.refund : V4_REFUNDS[flaw.severity]);
+
 /** The weakness wheel interrupts after this many steals. */
 export const WHEEL_AFTER = 3;
 
@@ -93,16 +107,22 @@ export function priceIn(bucket: EraBucket, attrIdx: number, playerIdx: number): 
 }
 
 /** Dollars available on a given round — the refund arrives with the wheel. */
-export function budgetCapAt(round: number, refund: number): number {
-  return STEAL_BUDGET + (round >= WHEEL_AFTER ? refund : 0);
+export function budgetCapAt(round: number, refund: number, base: number = STEAL_BUDGET): number {
+  return base + (round >= WHEEL_AFTER ? refund : 0);
 }
 
 /**
  * A Budget pick is legal only if it leaves $1 for every remaining round.
  * Combined with the minimum-contract rule, a run can never wedge itself broke.
  */
-export function canAffordSteal(spentBefore: number, price: number, round: number, refund: number): boolean {
-  return spentBefore + price <= budgetCapAt(round, refund) - (ROUNDS - 1 - round);
+export function canAffordSteal(
+  spentBefore: number,
+  price: number,
+  round: number,
+  refund: number,
+  base: number = STEAL_BUDGET
+): boolean {
+  return spentBefore + price <= budgetCapAt(round, refund, base) - (ROUNDS - 1 - round);
 }
 
 /* ------------------------------------------------------------------ */
@@ -123,10 +143,11 @@ export function bestIn(bucket: EraBucket, attrIdx: number): EraPlayer {
 /* ------------------------------------------------------------------ */
 
 export function validateSteals(build: StealBuild): boolean {
-  if (build.v !== 3 && build.v !== 4) return false;
+  if (build.v !== 3 && build.v !== 4 && build.v !== 5) return false;
   if (!Array.isArray(build.steals) || build.steals.length !== ROUNDS) return false;
 
-  const v4 = build.v === 4;
+  const pool = poolFor(build.v);
+  const v4 = build.v >= 4;
   if (v4) {
     if (build.mode !== "classic" && build.mode !== "daily" && build.mode !== "budget") return false;
     const target = build.target ?? "ALL";
@@ -143,7 +164,9 @@ export function validateSteals(build: StealBuild): boolean {
 
   const tokens = v4 ? V4_TOKENS : tokensFor(FLAWS[build.flaw]);
   const budgetMode = v4 && build.mode === "budget";
-  const refund = budgetMode ? FLAWS[build.flaw].refund : 0;
+  const refund = budgetMode ? flawRefundFor(FLAWS[build.flaw], build.v) : 0;
+  const budgetBase = stealBudgetFor(build.v);
+  const positional = isPositional(build);
   const used = { team: 0, era: 0 };
   const people = new Set<string>();
   let spent = 0;
@@ -151,35 +174,59 @@ export function validateSteals(build: StealBuild): boolean {
   for (let round = 0; round < ROUNDS; round++) {
     const pair = build.steals[round];
     if (!pair || pair.length !== 2) return false;
-    const [bucketIdx, playerIdx] = pair;
-    const bucket = BUCKETS[bucketIdx];
-    if (!bucket) return false;
+
+    let bucket: EraBucket;
+    let playerIdx: number;
+    if (positional) {
+      // positional v5: [decadeIdx, indexWithinTheDealtTwelve]
+      const decade = POS_DECADES[pair[0]];
+      if (decade === undefined) return false;
+      const t = minSpinsForPosDecade(build.seed, round, decade);
+      if (t === null) return false;
+      used.team += t;
+      bucket = posBucketFor(build.seed, round, decade, build.target as Position);
+      playerIdx = pair[1];
+    } else {
+      const maybe = pool.buckets[pair[0]];
+      if (!maybe) return false;
+      bucket = maybe;
+      playerIdx = pair[1];
+      const spins = minSpinsFor(build.seed, round, pair[0], pool);
+      if (!spins) return false;
+      used.team += spins.team;
+      used.era += spins.era;
+    }
+
     const player = bucket.players[playerIdx];
     if (!player) return false;
     if (people.has(player.person)) return false;
     people.add(player.person);
 
-    const spins = minSpinsFor(build.seed, round, bucketIdx);
-    if (!spins) return false;
-    used.team += spins.team;
-    used.era += spins.era;
-
     if (budgetMode) {
       const price = priceIn(bucket, round, playerIdx);
-      if (!canAffordSteal(spent, price, round, refund)) return false;
+      if (!canAffordSteal(spent, price, round, refund, budgetBase)) return false;
       spent += price;
     }
   }
 
-  return spinsAffordable(used, tokens);
+  return positional ? used.team <= POS_TOKENS : spinsAffordable(used, tokens);
+}
+
+/** Positional decade wheel applies to v5 runs with a positional build target. */
+export function isPositional(build: StealBuild): boolean {
+  return build.v >= 5 && (build.target ?? "ALL") !== "ALL";
 }
 
 export function stealsFor(build: StealBuild): Steal[] | null {
   if (!validateSteals(build)) return null;
+  const pool = poolFor(build.v);
+  const positional = isPositional(build);
   const verdictRng = mulberry32(fnv1a(`verdict:${build.seed}:${build.flaw}`));
   return ATTRS.map((attr, round) => {
     const [bucketIdx, playerIdx] = build.steals[round];
-    const bucket = BUCKETS[bucketIdx];
+    const bucket = positional
+      ? posBucketFor(build.seed, round, POS_DECADES[bucketIdx], build.target as Position)
+      : pool.buckets[bucketIdx];
     const player = bucket.players[playerIdx];
     const rating = player.r[round];
     const rank = rankIn(bucket, round, rating);
@@ -201,7 +248,9 @@ export function stealsFor(build: StealBuild): Steal[] | null {
       grade,
       verdict,
       price: priceIn(bucket, round, playerIdx),
-      spins: minSpinsFor(build.seed, round, bucketIdx)!,
+      spins: positional
+        ? { team: minSpinsForPosDecade(build.seed, round, bucket.decade)!, era: 0 }
+        : minSpinsFor(build.seed, round, bucketIdx, pool)!,
     };
   });
 }
@@ -313,9 +362,10 @@ export function assignStealArchetype(d: StealDerived, steals: Steal[]): Archetyp
 export function stealSimSeed(build: StealBuild, steals: Steal[]): number {
   const ids = steals.map((s) => s.player.id).join(".");
   const dailyKey = build.mode === "daily" ? `d${build.daily}` : "";
-  if (build.v === 4) {
+  if (build.v >= 4) {
+    // `v4:` for v4 codes is frozen; v5 hashes its own prefix (and its own player ids)
     const flawId = build.flaw >= 0 ? FLAWS[build.flaw].id : "none";
-    return fnv1a(`${ids}#${flawId}#v4:${build.mode}#${build.target ?? "ALL"}#${dailyKey}#${build.attempt}`);
+    return fnv1a(`${ids}#${flawId}#v${build.v}:${build.mode}#${build.target ?? "ALL"}#${dailyKey}#${build.attempt}`);
   }
   return fnv1a(`${ids}#${FLAWS[build.flaw].id}#${build.mode}#${dailyKey}#${build.attempt}`);
 }
@@ -326,7 +376,7 @@ export function simulateSteals(build: StealBuild): StealResult | null {
   if (!steals) return null;
 
   const flaw = build.flaw >= 0 ? FLAWS[build.flaw] : null;
-  const target: PositionMode = build.v === 4 ? (build.target ?? "ALL") : "ALL";
+  const target: PositionMode = build.v >= 4 ? (build.target ?? "ALL") : "ALL";
   const derived = deriveSteals(steals, target);
   const simSeed = stealSimSeed(build, steals);
   const gauntlet = target !== "ALL" ? POSITION_GAUNTLETS[target] : GAUNTLET;
@@ -346,14 +396,14 @@ export function simulateSteals(build: StealBuild): StealResult | null {
   const ranked = [...steals].sort(
     (a, b) => gradeScore(b.grade) - gradeScore(a.grade) || b.rating - a.rating
   );
-  const budgetMode = build.v === 4 && build.mode === "budget";
+  const budgetMode = build.v >= 4 && build.mode === "budget";
 
   return {
     build,
     steals,
     flaw,
     spent: budgetMode ? steals.reduce((acc, s) => acc + s.price, 0) : 0,
-    refund: budgetMode && flaw ? flaw.refund : 0,
+    refund: budgetMode && flaw ? flawRefundFor(flaw, build.v) : 0,
     gradePoints: steals.reduce((acc, s) => acc + gradeScore(s.grade), 0),
     derived,
     rungs,

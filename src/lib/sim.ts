@@ -328,7 +328,9 @@ export function validateBuild(build: BuildCode): boolean {
   const entries = entriesFor(build);
   if (!entries) return false;
   if (build.flaw < 0 || build.flaw >= (build.v === 1 ? 10 : FLAWS.length)) return false;
-  const budget = build.v === 1 ? LEGACY_BUDGET : BUDGET + FLAWS[build.flaw].refund;
+  // frozen v2 refund scale — FLAWS[].refund now carries the v5 Budget values
+  const v2Refunds = { Mild: 0, Bad: 1, Brutal: 2, "Career-Threatening": 3 } as const;
+  const budget = build.v === 1 ? LEGACY_BUDGET : BUDGET + v2Refunds[FLAWS[build.flaw].severity];
   if (entries.reduce((a, e) => a + e.price, 0) > budget) return false;
   if (build.v === 2) {
     const position = build.position ?? "ALL";

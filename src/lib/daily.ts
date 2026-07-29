@@ -1,6 +1,6 @@
 import { fnv1a } from "@/lib/rng";
 import { gradeEmoji } from "@/lib/grade";
-import type { StealResult } from "@/lib/types";
+import { POSITIONS, type PositionMode, type StealResult } from "@/lib/types";
 import { TIER_NAMES, tierFor } from "@/lib/tiers";
 
 /** Daily #1 = launch day (UTC). */
@@ -22,6 +22,16 @@ export function dailyNumberFor(dateStr: string): number {
 /** Everyone's shop + official run key on this. */
 export function dailySeed(dateStr: string): number {
   return fnv1a(`99ovr-daily-${dateStr}`);
+}
+
+/**
+ * Some dates are positional dailies — the date decides and the UI labels it.
+ * Roughly 3 in 10 days land on a Best-position run over the decade wheel.
+ */
+export function dailyTargetFor(dateStr: string): PositionMode {
+  const h = fnv1a(`99ovr-daily-target-${dateStr}`);
+  if (h % 10 < 7) return "ALL";
+  return POSITIONS[(h >>> 4) % POSITIONS.length];
 }
 
 export function msToNextUtcMidnight(now: Date = new Date()): number {

@@ -98,7 +98,7 @@ export function SetupSheet({
         </div>
         <p className="mt-1.5 px-0.5 text-[11px] leading-snug text-dim">
           {target === "ALL"
-            ? "Or chase a positional crown — position scoring, that position's all-time boss ladder."
+            ? "Or chase a positional crown — the wheel spins whole decades of that position, and you face its all-time boss ladder."
             : `BEST ${target} BUILD: ${
                 target === "C"
                   ? "rim and defense count more, creation less"
