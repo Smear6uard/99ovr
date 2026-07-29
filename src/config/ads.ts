@@ -2,10 +2,10 @@
  * Monetization config. Flip ADS_ENABLED and paste your AdSense client ID
  * to go live — slot heights are reserved either way, so CLS stays 0.
  */
-export const ADS_ENABLED = false;
+export const ADS_ENABLED = true;
 
 /** e.g. "ca-pub-1234567890123456" */
-export const ADSENSE_CLIENT = "";
+export const ADSENSE_CLIENT = "ca-pub-9476228948751191";
 
 /** e.g. "G-XXXXXXXXXX" — rendered in layout when set. */
 export const GA4_ID = "";

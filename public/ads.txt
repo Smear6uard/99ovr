@@ -1,4 +1,1 @@
-# ads.txt for 99ovr.app
-# Paste your ad network entries below after approval.
-# AdSense example (replace with your real publisher ID):
-# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+google.com, pub-9476228948751191, DIRECT, f08c47fec0942fa0
