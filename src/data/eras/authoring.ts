@@ -28,6 +28,9 @@ export function slug(name: string): string {
 
 export type Draft = { name: string; line: string; note: string; r: Ratings };
 
+/** 2010 → "10s", 2000 → "00s", 1990 → "90s". Eras display as decades, never exact years. */
+export const decadeTag = (decade: number): string => `${String(decade % 100).padStart(2, "0")}s`;
+
 /** One roster line. `person` (the cross-bucket steal-dedup key) is derived. */
 export const p = (name: string, line: string, note: string, r: Ratings): Draft => ({ name, line, note, r });
 
@@ -48,7 +51,7 @@ export const era = (
   franchise,
   team,
   season,
-  label: `${season} ${team}`,
+  label: `${decadeTag(Math.floor(Number(season) / 10) * 10)} ${team}`,
   decade: Math.floor(Number(season) / 10) * 10,
   vibe,
   tag,

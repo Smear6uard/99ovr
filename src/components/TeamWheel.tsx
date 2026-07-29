@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { BUCKETS } from "@/data/eras";
+import { decadeTag } from "@/data/eras/authoring";
 import type { EraBucket } from "@/lib/types";
 
 const ROW = 44;
@@ -96,7 +97,10 @@ export function TeamWheel({
   reduced: boolean;
 }) {
   const teams = useMemo(() => fillers(round * 5 + 1, (b) => b.team, bucket.team), [round, bucket.team]);
-  const seasons = useMemo(() => fillers(round * 11 + 4, (b) => b.season, bucket.season), [round, bucket.season]);
+  const seasons = useMemo(
+    () => fillers(round * 11 + 4, (b) => decadeTag(b.decade), decadeTag(bucket.decade)),
+    [round, bucket.decade]
+  );
   const live = spinning && !reduced;
 
   return (
