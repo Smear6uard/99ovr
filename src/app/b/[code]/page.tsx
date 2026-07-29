@@ -59,29 +59,35 @@ export default async function BuildPage({ params }: Props) {
   if (!loaded) notFound();
 
   const steal = loaded.kind === "steal";
-  const target = steal ? `/play?vs=${code}` : `/budget?vs=${code}`;
+  const target = steal ? `/h2h/${code}` : "/budget";
+  const chip = steal
+    ? loaded.result.build.mode === "daily"
+      ? `DAILY #${loaded.result.build.daily}`
+      : loaded.result.build.mode === "budget"
+        ? "BUDGET"
+        : loaded.result.build.v === 4
+          ? "CLASSIC"
+          : "SHARED RUN"
+    : "BUDGET BALL (LEGACY)";
 
   return (
     <div className="pt-1">
       {steal ? (
-        <StealCard
-          result={loaded.result}
-          modeChip={loaded.result.build.mode === "daily" ? `DAILY #${loaded.result.build.daily}` : "SHARED RUN"}
-        />
+        <StealCard result={loaded.result} modeChip={chip} />
       ) : (
-        <ResultCard result={loaded.result} modeChip="BUDGET BALL" />
+        <ResultCard result={loaded.result} modeChip={chip} />
       )}
 
       <Link
         href={target}
         className="mt-4 block w-full rounded-lg bg-gold py-4 text-center font-display text-2xl uppercase tracking-wide text-ink shadow-[0_8px_28px_rgba(242,185,75,0.3)] transition-transform active:scale-[0.99]"
       >
-        Beat this build
+        {steal ? "Beat this build" : "Play the new Budget"}
       </Link>
       <p className="mt-1.5 text-center text-[11px] text-dim">
         {steal
-          ? "Same wheel. Same six landings. Your flaw, your reads."
-          : "Same packs. Same prices. The original $20 challenge."}
+          ? "Same spins. Same rosters. Your reads against theirs."
+          : "This one's from the original $20 game — the Budget mode has evolved."}
       </p>
 
       <GauntletLog result={loaded.result} />
@@ -90,7 +96,7 @@ export default async function BuildPage({ params }: Props) {
         href={steal ? "/play" : "/budget"}
         className="mt-6 block w-full rounded-lg border border-line py-3 text-center font-display text-lg uppercase tracking-wide text-paper transition-colors hover:border-gold hover:text-gold"
       >
-        {steal ? "Start your own run" : "Build from scratch"}
+        Start your own run
       </Link>
     </div>
   );

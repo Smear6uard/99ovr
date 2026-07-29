@@ -138,17 +138,28 @@ export type Steal = {
   best: EraPlayer;
   grade: Grade;
   verdict: string;
+  /** what this skill costs in Budget mode — derived from the hidden rating */
+  price: Price;
   /** team re-spins and era re-spins spent to reach this bucket */
   spins: { team: number; era: number };
 };
 
-/** The encodable v3 run. */
+/**
+ * v4 mode set. `classic` is the setup-sheet sandbox, `budget` the $20 run
+ * with the mid-run weakness wheel. v3 codes carry "sandbox" | "daily".
+ */
+export type StealMode = "classic" | "daily" | "budget";
+export type StealGameMode = GameMode | StealMode;
+
+/** The encodable spin-steal run — v3 (flaw economy) or v4 (four modes). */
 export type StealBuild = {
-  v: 3;
-  mode: GameMode;
+  v: 3 | 4;
+  mode: StealGameMode;
   seed: number;
-  /** index into FLAWS */
+  /** index into FLAWS · −1 in v4 classic/daily (no flaw outside Budget) */
   flaw: number;
+  /** v4 build target — "ALL" is BEST PLAYER, else the positional challenge. v3 omits it. */
+  target?: PositionMode;
   /** [bucketIdx, playerIdx] per round, in ATTRS order */
   steals: Array<[number, number]>;
   attempt: number;
@@ -175,7 +186,14 @@ export type StealDerived = {
 export type StealResult = {
   build: StealBuild;
   steals: Steal[];
-  flaw: Flaw;
+  /** null in v4 classic/daily — the flaw exists only in Budget (and v3) */
+  flaw: Flaw | null;
+  /** Budget mode: dollars spent across the six steals */
+  spent: number;
+  /** Budget mode: flaw refund added after the weakness wheel */
+  refund: number;
+  /** sum of grade scores — the H2H tiebreaker */
+  gradePoints: number;
   derived: StealDerived;
   rungs: RungResult[];
   fellAt: number | null;

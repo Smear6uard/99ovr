@@ -5,61 +5,119 @@ import { BUCKETS } from "@/data/eras";
 import { FLAWS } from "@/data/flaws";
 import { formatDailyBlock } from "@/lib/daily";
 import { encodeSteal } from "@/lib/encode";
+import { GRADE_HEX } from "@/lib/grade";
 import { freshSeed, usePrefersReducedMotion } from "@/lib/hooks";
-import { resultText } from "@/lib/share";
+import { copyText, h2hUrl, resultText } from "@/lib/share";
+import { playSfx } from "@/lib/sfx";
 import { drawFlaws } from "@/lib/shop";
-import { simulateSteals } from "@/lib/steal";
+import { STEAL_BUDGET, WHEEL_AFTER, canAffordSteal, priceIn, simulateSteals } from "@/lib/steal";
 import { maybeRecordBest } from "@/lib/storage";
-import { ROUNDS, canRespin, tokensFor, totalRespinsLeft, type SpinsUsed } from "@/lib/wheel";
-import type { GameMode, StealBuild, StealResult } from "@/lib/types";
+import { TIER_HEX, tierFor } from "@/lib/tiers";
+import { ROUNDS, V4_TOKENS, canRespin, totalRespinsLeft, type SpinsUsed } from "@/lib/wheel";
+import { ATTR_LABELS, type PositionMode, type Steal, type StealBuild, type StealMode, type StealResult } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
 import { FlawSpin } from "@/components/FlawSpin";
 import { GauntletLog } from "@/components/GauntletLog";
+import { H2HCompare } from "@/components/H2HCompare";
 import { ShareRow } from "@/components/ShareRow";
 import { SimTicker } from "@/components/SimTicker";
 import { StealCard } from "@/components/StealCard";
 import { StealRound } from "@/components/StealRound";
-import { Verdict } from "@/components/Verdict";
 
-type Phase = "flaw" | "steal" | "sim" | "verdict" | "result";
-
-export type Challenge = {
-  code: string;
-  seed: number;
-  ovr: number;
-  archetypeName: string;
-};
+type Phase = "steal" | "wheel" | "sim" | "result";
 
 const ZERO: SpinsUsed = { team: 0, era: 0 };
 
+function BookendChips({ result }: { result: StealResult }) {
+  const rows: Array<{ title: string; steal: Steal; hex: string }> = [
+    { title: "BEST STEAL", steal: result.bestSteal, hex: "#3fb68b" },
+    { title: "THE REACH", steal: result.reach, hex: "#e5484d" },
+  ];
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      {rows.map((row) => (
+        <div key={row.title} className="rounded-lg border-2 bg-panel px-3 py-2.5" style={{ borderColor: row.hex }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-bold tracking-[0.2em]" style={{ color: row.hex }}>
+              {row.title}
+            </span>
+            <span
+              className="inline-flex h-5 min-w-7 items-center justify-center border font-display text-[12px]"
+              style={{ borderColor: GRADE_HEX[row.steal.grade], color: GRADE_HEX[row.steal.grade] }}
+            >
+              {row.steal.grade}
+            </span>
+          </div>
+          <p className="mt-1 truncate font-display text-lg uppercase leading-tight text-paper">
+            {row.steal.player.name}
+          </p>
+          <p className="truncate text-[9px] tracking-[0.12em] text-dim">
+            {ATTR_LABELS[row.steal.attr].toUpperCase()} · {row.steal.bucket.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** One summary line; the full game log stays behind the accordion, never auto-played. */
+function GauntletAccordion({ result, refreshKey }: { result: StealResult; refreshKey?: number }) {
+  const line =
+    result.fellAt === null
+      ? "Cleared all 10 Rounds"
+      : `Fell in Round ${result.fellAt} — ${result.gauntlet[result.fellAt - 1].shortName}`;
+  return (
+    <details className="mt-3 rounded-lg border border-line bg-panel">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="text-[12px] font-bold tracking-[0.1em]" style={{ color: result.fellAt === null ? "#3fb68b" : "#e5484d" }}>
+          {line.toUpperCase()}
+        </span>
+        <span className="text-[10px] tracking-[0.16em] text-dim">VIEW LOG ▾</span>
+      </summary>
+      <div className="px-3 pb-2">
+        <GauntletLog result={result} refreshKey={refreshKey} />
+      </div>
+    </details>
+  );
+}
+
+export type StealFlowProps = {
+  mode: StealMode;
+  /** Ball Knowledge + build target — Classic/Budget pick these on the setup sheet */
+  knowledge?: boolean;
+  target?: PositionMode;
+  fixedSeed?: number;
+  daily?: { number: number; date: string };
+  official?: boolean;
+  startAttempt?: number;
+  /** Head to Head: the challenger's re-simulated run — result becomes a comparison */
+  challenge?: StealResult | null;
+  /** rendered on the official daily result screen (initials entry, leaderboard) */
+  officialExtras?: React.ReactNode;
+  onOfficialComplete?: (result: StealResult, code: string, block: string) => void;
+};
+
 /**
- * The v3 loop: flaw → six steals → sim → verdict → result.
- * The sim underneath is pure; this component owns UI state and timers only.
+ * The core loop, all four modes: six spins, six steals, one verdict screen.
+ * Classic/Daily never see a flaw; Budget breaks for the weakness wheel after
+ * three steals. The sim underneath is pure; this owns UI state and timers.
  */
 export function StealFlow({
   mode,
+  knowledge = false,
+  target = "ALL",
   fixedSeed,
   daily,
   official = false,
   startAttempt = 0,
   challenge = null,
-  knowledge = false,
-  topPct = null,
+  officialExtras,
   onOfficialComplete,
-}: {
-  mode: GameMode;
-  fixedSeed?: number;
-  daily?: { number: number; date: string };
-  official?: boolean;
-  startAttempt?: number;
-  challenge?: Challenge | null;
-  knowledge?: boolean;
-  topPct?: number | null;
-  onOfficialComplete?: (result: StealResult, code: string, block: string) => void;
-}) {
+}: StealFlowProps) {
   const reduced = usePrefersReducedMotion();
+  const budgetMode = mode === "budget";
   const [seed, setSeed] = useState<number | null>(fixedSeed ?? null);
-  const [phase, setPhase] = useState<Phase>("flaw");
+  const [phase, setPhase] = useState<Phase>("steal");
   const [flawIdx, setFlawIdx] = useState<number | null>(null);
   const [round, setRound] = useState(0);
   /** re-spins spent per round, index-aligned with ATTRS */
@@ -68,19 +126,27 @@ export function StealFlow({
   const [attempt, setAttempt] = useState(startAttempt);
   const [result, setResult] = useState<StealResult | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [challengeCopied, setChallengeCopied] = useState(false);
   const officialReported = useRef(false);
 
   useEffect(() => {
     if (seed === null) setSeed(freshSeed());
   }, [seed]);
 
-  const flawChoices = useMemo(() => (seed !== null ? drawFlaws(seed) : []), [seed]);
-  const tokens = useMemo(() => (flawIdx === null ? null : tokensFor(FLAWS[flawIdx])), [flawIdx]);
+  const flawChoices = useMemo(
+    () => (budgetMode && seed !== null ? drawFlaws(seed) : []),
+    [budgetMode, seed]
+  );
   const usedTotal = useMemo(
     () => spins.reduce((acc, s) => ({ team: acc.team + s.team, era: acc.era + s.era }), { ...ZERO }),
     [spins]
   );
   const stolen = useMemo(() => new Set(picks.map(([b, p]) => BUCKETS[b].players[p].person)), [picks]);
+  const refund = budgetMode && flawIdx !== null ? FLAWS[flawIdx].refund : 0;
+  const spent = useMemo(
+    () => (budgetMode ? picks.reduce((acc, [b, p], r) => acc + priceIn(BUCKETS[b], r, p), 0) : 0),
+    [budgetMode, picks]
+  );
 
   useEffect(() => {
     if (!toast) return;
@@ -88,9 +154,10 @@ export function StealFlow({
     return () => clearTimeout(t);
   }, [toast]);
 
+  // the short SIMULATING beat, then straight to the one verdict screen
   useEffect(() => {
     if (phase !== "sim") return;
-    const t = setTimeout(() => setPhase("verdict"), reduced ? 400 : 1700);
+    const t = setTimeout(() => setPhase("result"), reduced ? 400 : 1500);
     return () => clearTimeout(t);
   }, [phase, reduced]);
 
@@ -98,24 +165,26 @@ export function StealFlow({
 
   useEffect(() => {
     if (phase !== "result" || !result) return;
+    playSfx("stamp");
     const code = encodeSteal(result.build);
     if (isOfficialRun && onOfficialComplete && !officialReported.current) {
       officialReported.current = true;
       onOfficialComplete(result, code, formatDailyBlock(result, daily?.number ?? 1));
     }
-    if (mode === "sandbox") {
+    if (mode === "classic" && !challenge) {
       maybeRecordBest({ ovr: result.derived.ovr, code, archetypeName: result.archetype.name });
     }
-  }, [phase, result, isOfficialRun, mode, onOfficialComplete, daily?.number]);
+  }, [phase, result, isOfficialRun, mode, challenge, onOfficialComplete, daily?.number]);
 
   const runSim = useCallback(
     (steals: Array<[number, number]>, withAttempt: number) => {
-      if (seed === null || flawIdx === null) return;
+      if (seed === null) return;
       const build: StealBuild = {
-        v: 3,
+        v: 4,
         mode,
         seed,
-        flaw: flawIdx,
+        flaw: budgetMode ? (flawIdx ?? 0) : -1,
+        target,
         steals,
         attempt: withAttempt,
         daily: daily?.number ?? 0,
@@ -130,15 +199,15 @@ export function StealFlow({
       setResult(res);
       setPhase("sim");
     },
-    [seed, flawIdx, mode, daily, knowledge]
+    [seed, mode, budgetMode, flawIdx, target, daily, knowledge]
   );
 
   const handleRespin = useCallback(
     (kind: "team" | "era") => {
-      if (!tokens || !canRespin(kind, tokens, usedTotal)) return;
+      if (!canRespin(kind, V4_TOKENS, usedTotal)) return;
       setSpins((prev) => prev.map((s, i) => (i === round ? { ...s, [kind]: s[kind] + 1 } : s)));
     },
-    [tokens, usedTotal, round]
+    [usedTotal, round]
   );
 
   const handleSteal = useCallback(
@@ -147,12 +216,24 @@ export function StealFlow({
         setToast("Already stolen from. One skill per player.");
         return;
       }
+      if (budgetMode) {
+        const price = priceIn(BUCKETS[bucketIdx], round, playerIdx);
+        if (!canAffordSteal(spent, price, round, refund)) {
+          setToast(`Can't afford $${price} — every remaining round still needs a dollar.`);
+          return;
+        }
+        playSfx("cash");
+      }
       const next = [...picks, [bucketIdx, playerIdx] as [number, number]];
       setPicks(next);
-      if (next.length === ROUNDS) runSim(next, attempt);
-      else setRound(next.length);
+      if (next.length === ROUNDS) {
+        runSim(next, attempt);
+      } else {
+        setRound(next.length);
+        if (budgetMode && next.length === WHEEL_AFTER) setPhase("wheel");
+      }
     },
-    [picks, stolen, runSim, attempt]
+    [picks, stolen, budgetMode, round, spent, refund, runSim, attempt]
   );
 
   const newRun = useCallback(() => {
@@ -162,8 +243,8 @@ export function StealFlow({
     setFlawIdx(null);
     setResult(null);
     setAttempt((a) => (mode === "daily" ? a + 1 : 0));
-    if (mode === "sandbox") setSeed(challenge ? challenge.seed : freshSeed());
-    setPhase("flaw");
+    if (mode !== "daily") setSeed(challenge ? challenge.build.seed : freshSeed());
+    setPhase("steal");
   }, [mode, challenge]);
 
   if (seed === null) return <div className="min-h-[420px]" aria-hidden />;
@@ -173,21 +254,16 @@ export function StealFlow({
     mode === "daily"
       ? `DAILY #${daily?.number ?? "?"} · ${isOfficialRun ? "OFFICIAL" : "PRACTICE"}`
       : challenge
-        ? "DUEL"
-        : "SANDBOX";
+        ? "HEAD TO HEAD"
+        : mode === "budget"
+          ? "BUDGET"
+          : "CLASSIC";
+  const tierHex = result ? TIER_HEX[tierFor(result.derived.ovr)] : "#f2b94b";
+  const budgetLeft = STEAL_BUDGET + refund - spent;
 
   return (
     <div>
-      {phase === "flaw" ? (
-        <FlawSpin
-          choices={flawChoices}
-          selected={flawIdx}
-          onSelect={setFlawIdx}
-          onAccept={() => setPhase("steal")}
-        />
-      ) : null}
-
-      {phase === "steal" && tokens ? (
+      {phase === "steal" ? (
         <>
           <div className="sticky top-0 z-30 -mx-4 flex items-center justify-between border-b border-line bg-ink/95 px-4 py-2 backdrop-blur">
             <div className="flex gap-1" aria-label={`${picks.length} of ${ROUNDS} steals made`}>
@@ -200,8 +276,15 @@ export function StealFlow({
                 />
               ))}
             </div>
-            <span className="text-[10px] font-bold tracking-[0.14em] text-dim">
-              RE-SPINS <span className="text-gold">{totalRespinsLeft(tokens, usedTotal)}</span> LEFT
+            <span className="flex items-center gap-3 text-[10px] font-bold tracking-[0.14em] text-dim">
+              {budgetMode ? (
+                <span aria-label={`${budgetLeft} dollars left`}>
+                  BUDGET <span className="font-display text-[13px] tracking-normal text-win">${budgetLeft}</span>
+                </span>
+              ) : null}
+              <span>
+                RE-SPINS <span className="text-gold">{totalRespinsLeft(V4_TOKENS, usedTotal)}</span> LEFT
+              </span>
             </span>
           </div>
 
@@ -210,10 +293,11 @@ export function StealFlow({
             round={round}
             seed={seed}
             spins={spins[round]}
-            tokens={tokens}
+            tokens={V4_TOKENS}
             usedTotal={usedTotal}
             knowledge={knowledge}
             stolen={stolen}
+            budget={budgetMode ? { spent, refund, round } : null}
             onRespin={handleRespin}
             onSteal={handleSteal}
           />
@@ -221,27 +305,36 @@ export function StealFlow({
         </>
       ) : null}
 
-      {phase === "sim" ? <SimTicker attempt={attempt} /> : null}
-
-      {phase === "verdict" && result ? (
-        <Verdict key={result.simSeed} result={result} onDone={() => setPhase("result")} />
+      {phase === "wheel" ? (
+        <FlawSpin
+          choices={flawChoices}
+          selected={flawIdx}
+          economy="budget"
+          onSelect={setFlawIdx}
+          onAccept={() => setPhase("steal")}
+        />
       ) : null}
+
+      {phase === "sim" ? <SimTicker attempt={attempt} /> : null}
 
       {phase === "result" && result ? (
         <div className="pt-2">
-          <StealCard
-            key={result.simSeed}
-            result={result}
-            animate
-            modeChip={modeChip}
-            challenge={challenge ? { ovr: challenge.ovr, archetypeName: challenge.archetypeName } : null}
-            topPct={isOfficialRun ? topPct : null}
-          />
+          {challenge ? (
+            <H2HCompare key={result.simSeed} mine={result} theirs={challenge} />
+          ) : (
+            <>
+              <StealCard key={result.simSeed} result={result} animate modeChip={modeChip} />
+              <BookendChips result={result} />
+              <GauntletAccordion result={result} refreshKey={attempt} />
+            </>
+          )}
 
+          {/* RUN IT BACK — the most prominent thing on the screen */}
           <button
             type="button"
             onClick={() => runSim(picks, attempt + 1)}
-            className="mt-4 w-full rounded-lg bg-gold py-4 font-display text-2xl uppercase tracking-wide text-ink shadow-[0_8px_28px_rgba(242,185,75,0.3)] transition-transform active:scale-[0.99]"
+            className="mt-4 w-full rounded-xl py-5 font-display text-3xl uppercase tracking-[0.08em] text-ink transition-transform active:scale-[0.99]"
+            style={{ background: tierHex, boxShadow: `0 10px 34px ${tierHex}55` }}
           >
             Run it back
           </button>
@@ -250,21 +343,38 @@ export function StealFlow({
             {isOfficialRun && official ? " · re-sims are unofficial" : ""}
           </p>
 
+          {mode === "classic" ? (
+            <button
+              type="button"
+              onClick={() => {
+                void copyText(h2hUrl(code)).then((ok) => {
+                  setChallengeCopied(ok);
+                  setTimeout(() => setChallengeCopied(false), 1600);
+                });
+              }}
+              className="mt-3 w-full rounded-lg border-2 border-gold/70 py-3 font-display text-xl uppercase tracking-wide text-gold transition-colors hover:border-gold"
+            >
+              {challengeCopied ? "Link copied — go start beef" : "⚔ Challenge a friend"}
+            </button>
+          ) : null}
+
           <ShareRow
             summary={{ ovr: result.derived.ovr, archetypeName: result.archetype.name }}
             text={resultText(result, code)}
             code={code}
-            dailyBlock={isOfficialRun && daily ? formatDailyBlock(result, daily.number, topPct) : undefined}
+            dailyBlock={isOfficialRun && daily ? formatDailyBlock(result, daily.number) : undefined}
           />
 
-          <AdSlot id="result-primary" refreshKey={attempt} />
+          {isOfficialRun && officialExtras ? <div className="mt-4">{officialExtras}</div> : null}
 
-          <GauntletLog result={result} refreshKey={attempt} />
+          {challenge ? <GauntletAccordion result={result} refreshKey={attempt} /> : null}
+
+          <AdSlot id="result-primary" refreshKey={attempt} />
 
           <button
             type="button"
             onClick={newRun}
-            className="mt-6 w-full rounded-lg border border-line py-3 font-display text-lg uppercase tracking-wide text-paper transition-colors hover:border-gold hover:text-gold"
+            className="mt-2 w-full rounded-lg border border-line py-3 font-display text-lg uppercase tracking-wide text-paper transition-colors hover:border-gold hover:text-gold"
           >
             {mode === "daily" ? "New practice run" : challenge ? "Rematch: same wheel" : "New run"}
           </button>

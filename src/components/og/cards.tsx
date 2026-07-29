@@ -3,6 +3,7 @@
  * explicit display:flex on every multi-child container — satori rules.
  */
 import { GRADE_HEX } from "@/lib/grade";
+import { STEAL_BUDGET } from "@/lib/steal";
 import { TIER_HEX, TIER_NAMES, tierFor, tierForPrice } from "@/lib/tiers";
 import { ATTR_ABBR, POSITION_LABELS, type SimResult, type StealResult } from "@/lib/types";
 
@@ -515,9 +516,51 @@ function stealGauntletLine(result: StealResult): { text: string; color: string }
   };
 }
 
+function stealModeChip(result: StealResult): string {
+  const { build } = result;
+  if (build.mode === "daily") return `DAILY #${build.daily}`;
+  if (build.mode === "budget") return "BUDGET";
+  if (build.v === 4) return "CLASSIC";
+  return "SIX STEALS";
+}
+
+/** The chip row every steal OG card opens with: brand, mode, target, knowledge. */
+function StealChips({ result, size = 16 }: { result: StealResult; size?: number }) {
+  const { build } = result;
+  const target = build.target ?? "ALL";
+  return (
+    <>
+      <Chip text={stealModeChip(result)} color={DIM} border={LINE} size={size} />
+      {target !== "ALL" ? <Chip text={`BEST ${target} BUILD`} color={GOLD} border={GOLD} size={size} /> : null}
+      {build.knowledge ? <Chip text="BALL KNOWLEDGE" color={GOLD} border={GOLD} size={size} /> : null}
+    </>
+  );
+}
+
+/** FLAW sidebar block — Budget (and v3) only; classic/daily runs have none. */
+function FlawBlock({ result, scale = 1 }: { result: StealResult; scale?: number }) {
+  if (!result.flaw) return null;
+  const budget = result.build.v === 4 && result.build.mode === "budget";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", borderLeft: `4px solid ${LOSS}`, paddingLeft: 14 * scale }}>
+      <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 13 * scale, color: LOSS, letterSpacing: 3 }}>
+        FLAW{budget ? ` · +$${result.refund} BACK` : ""}
+      </span>
+      <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 19 * scale, color: PAPER }}>
+        {result.flaw.name}
+      </span>
+      {budget ? (
+        <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 14 * scale, color: GOLD, marginTop: 4 * scale }}>
+          ${result.spent} SPENT OF ${STEAL_BUDGET + result.refund}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 /** 1200×630 — what iMessage/X unfurl for a Six Steals run. */
 export function OgStealLandscape({ result }: { result: StealResult }) {
-  const { derived, archetype, flaw, build } = result;
+  const { derived, archetype } = result;
   const tier = tierFor(derived.ovr);
   const hex = TIER_HEX[tier];
   const gl = stealGauntletLine(result);
@@ -542,12 +585,7 @@ export function OgStealLandscape({ result }: { result: StealResult }) {
             <span style={{ fontFamily: "Anton", fontSize: 30, color: PAPER, letterSpacing: 1 }}>
               <span style={{ color: GOLD }}>99</span>OVR
             </span>
-            <Chip
-              text={build.mode === "daily" ? `DAILY #${build.daily}` : "SIX STEALS"}
-              color={DIM}
-              border={LINE}
-            />
-            {build.knowledge ? <Chip text="BALL KNOWLEDGE" color={GOLD} border={GOLD} /> : null}
+            <StealChips result={result} />
           </div>
 
           <div style={{ display: "flex", alignItems: "flex-end", gap: 24, marginTop: -14 }}>
@@ -603,12 +641,7 @@ export function OgStealLandscape({ result }: { result: StealResult }) {
         >
           <StealRows result={result} />
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", flexDirection: "column", borderLeft: `4px solid ${LOSS}`, paddingLeft: 14 }}>
-              <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 13, color: LOSS, letterSpacing: 3 }}>
-                FLAW
-              </span>
-              <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 19, color: PAPER }}>{flaw.name}</span>
-            </div>
+            <FlawBlock result={result} />
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <span style={{ fontFamily: "Anton", fontSize: 30, color: GOLD, letterSpacing: 2 }}>99OVR.APP</span>
             </div>
@@ -621,7 +654,7 @@ export function OgStealLandscape({ result }: { result: StealResult }) {
 
 /** 1080×1350 — the IG/TikTok download card for a Six Steals run. */
 export function OgStealPortrait({ result }: { result: StealResult }) {
-  const { derived, archetype, flaw, build } = result;
+  const { derived, archetype } = result;
   const tier = tierFor(derived.ovr);
   const hex = TIER_HEX[tier];
   const gl = stealGauntletLine(result);
@@ -647,13 +680,7 @@ export function OgStealPortrait({ result }: { result: StealResult }) {
           <span style={{ fontFamily: "Anton", fontSize: 38, color: PAPER, letterSpacing: 1 }}>
             <span style={{ color: GOLD }}>99</span>OVR
           </span>
-          <Chip
-            text={build.mode === "daily" ? `DAILY #${build.daily}` : "SIX STEALS"}
-            color={DIM}
-            border={LINE}
-            size={18}
-          />
-          {build.knowledge ? <Chip text="BALL KNOWLEDGE" color={GOLD} border={GOLD} size={18} /> : null}
+          <StealChips result={result} size={18} />
         </div>
 
         {/* Anton's glyphs overshoot their line box, so the tier block needs real
@@ -698,12 +725,7 @@ export function OgStealPortrait({ result }: { result: StealResult }) {
         <div style={{ display: "flex", width: "100%", justifyContent: "space-between", marginTop: 34, position: "relative" }}>
           <StealRows result={result} scale={1.1} />
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 16, width: 300 }}>
-            <div style={{ display: "flex", flexDirection: "column", borderLeft: `5px solid ${LOSS}`, paddingLeft: 16 }}>
-              <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 15, color: LOSS, letterSpacing: 3 }}>
-                FLAW
-              </span>
-              <span style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 22, color: PAPER }}>{flaw.name}</span>
-            </div>
+            <FlawBlock result={result} scale={1.1} />
           </div>
         </div>
 
@@ -730,8 +752,19 @@ export function OgStealPortrait({ result }: { result: StealResult }) {
   );
 }
 
-/** Default OG for / and /daily — the pitch as a card. */
-export function OgHero() {
+export type HeroVariant = "default" | "daily" | "classic" | "budget" | "h2h";
+
+const HERO_COPY: Record<HeroVariant, { tagline: string; sub: string; prices: boolean }> = {
+  default: { tagline: "SPIN AN ERA. READ THE ROSTER. STEAL THE SKILL.", sub: "FOUR MODES · SIX STEALS · TEN BOSSES", prices: false },
+  daily: { tagline: "SAME WHEEL FOR EVERYONE ON EARTH.", sub: "DAILY · ONE OFFICIAL RUN · ARCADE LEADERBOARD", prices: false },
+  classic: { tagline: "SIX SPINS. SIX ROSTERS. NO PRICES.", sub: "CLASSIC · BEST PLAYER OR A POSITIONAL CROWN", prices: false },
+  budget: { tagline: "EVERY SKILL HAS A PRICE. YOU HAVE $20.", sub: "BUDGET · THE WEAKNESS WHEEL PAYS YOU BACK", prices: true },
+  h2h: { tagline: "SAME WHEEL. ONE WINNER.", sub: "HEAD TO HEAD · LOSER TAKES THE ROAST", prices: false },
+};
+
+/** Mode hero OGs for /, /daily, /play, /budget, /h2h. */
+export function OgHero({ variant = "default" }: { variant?: HeroVariant }) {
+  const copy = HERO_COPY[variant] ?? HERO_COPY.default;
   return (
     <div
       style={{
@@ -771,29 +804,31 @@ export function OgHero() {
             position: "relative",
           }}
         >
-          SPIN AN ERA. READ THE ROSTER. STEAL THE SKILL.
+          {copy.tagline}
         </span>
-        <div style={{ display: "flex", gap: 12, marginTop: 18, position: "relative" }}>
-          {([1, 2, 3, 4, 5] as const).map((p) => (
-            <div
-              key={p}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 72,
-                height: 46,
-                borderRadius: 8,
-                background: TIER_HEX[tierForPrice(p)],
-                color: INK,
-                fontFamily: "Anton",
-                fontSize: 26,
-              }}
-            >
-              ${p}
-            </div>
-          ))}
-        </div>
+        {copy.prices ? (
+          <div style={{ display: "flex", gap: 12, marginTop: 18, position: "relative" }}>
+            {([1, 2, 3, 4, 5] as const).map((p) => (
+              <div
+                key={p}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 72,
+                  height: 46,
+                  borderRadius: 8,
+                  background: TIER_HEX[tierForPrice(p)],
+                  color: INK,
+                  fontFamily: "Anton",
+                  fontSize: 26,
+                }}
+              >
+                ${p}
+              </div>
+            ))}
+          </div>
+        ) : null}
         <span
           style={{
             fontFamily: "Inter",
@@ -805,7 +840,66 @@ export function OgHero() {
             position: "relative",
           }}
         >
-          SIX STEALS · NO PRICES · TEN BOSSES
+          {copy.sub}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** 1200×630 for /h2h/[code] — the challenge card: CAN YOU BEAT N OVR? */
+export function OgH2H({ result }: { result: StealResult }) {
+  const tier = tierFor(result.derived.ovr);
+  const hex = TIER_HEX[tier];
+  return (
+    <div style={{ width: 1200, height: 630, display: "flex", background: INK, padding: 26, fontFamily: "Inter" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          border: `8px solid ${hex}`,
+          borderRadius: 26,
+          background: PANEL,
+          position: "relative",
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        <CourtArc width={1120} height={550} />
+        <div style={{ display: "flex", alignItems: "center", gap: 14, position: "relative" }}>
+          <span style={{ fontFamily: "Anton", fontSize: 34, color: PAPER, letterSpacing: 1 }}>
+            <span style={{ color: GOLD }}>99</span>OVR
+          </span>
+          <Chip text="HEAD TO HEAD" color={GOLD} border={GOLD} size={18} />
+          {result.build.knowledge ? <Chip text="BALL KNOWLEDGE" color={GOLD} border={GOLD} size={18} /> : null}
+        </div>
+        <span
+          style={{ fontFamily: "Anton", fontSize: 96, color: PAPER, letterSpacing: 3, position: "relative", marginTop: 8 }}
+        >
+          CAN YOU BEAT
+        </span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 20, position: "relative" }}>
+          <span style={{ fontFamily: "Anton", fontSize: 210, color: hex, lineHeight: 0.9 }}>{result.derived.ovr}</span>
+          <span style={{ fontFamily: "Anton", fontSize: 96, color: hex }}>OVR?</span>
+        </div>
+        <div style={{ display: "flex", marginTop: 18, position: "relative" }}>
+          <GradeRow result={result} scale={1.15} />
+        </div>
+        <span
+          style={{
+            fontFamily: "Inter",
+            fontWeight: 700,
+            fontSize: 22,
+            color: DIM,
+            letterSpacing: 3,
+            marginTop: 14,
+            position: "relative",
+          }}
+        >
+          IDENTICAL SPINS · IDENTICAL ROSTERS · NO EXCUSES · 99OVR.APP
         </span>
       </div>
     </div>

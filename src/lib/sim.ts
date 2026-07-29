@@ -217,8 +217,9 @@ export type GauntletInput = { playerPower: number; fatigueMod: number; durabilit
 /**
  * `flatInjuryRisk` skips the durability scaling on injury flaws — true for v1
  * (no durability slot yet) and for v3 (durability removed; the flaw carries it).
+ * `flaw` is null for v4 classic/daily runs — no flaw ticks, ever.
  */
-export function runGauntlet(derived: GauntletInput, flaw: Flaw, simSeed: number, gauntlet: Rung[], flatInjuryRisk = false): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
+export function runGauntlet(derived: GauntletInput, flaw: Flaw | null, simSeed: number, gauntlet: Rung[], flatInjuryRisk = false): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
   const legacy = flatInjuryRisk;
   const rng: Rng = mulberry32(simSeed);
   const rungs: RungResult[] = [];
@@ -234,7 +235,9 @@ export function runGauntlet(derived: GauntletInput, flaw: Flaw, simSeed: number,
     const quipRoll = rng();
     const beatRoll = rng();
 
-    const tick = flawTick(flaw, opp.rung, flawRoll, !!opp.quick, !!opp.crafty, derived.durability, legacy);
+    const tick: FlawTick = flaw
+      ? flawTick(flaw, opp.rung, flawRoll, !!opp.quick, !!opp.crafty, derived.durability, legacy)
+      : { mod: 0, fired: false, injury: false };
 
     if (tick.injury) {
       const ps = 3 + Math.floor(scoreNoise * 6);
@@ -266,7 +269,7 @@ export function runGauntlet(derived: GauntletInput, flaw: Flaw, simSeed: number,
     const close = loserScore >= 8;
 
     let beat: string;
-    if (tick.fired && (!win || flaw.effect.kind === "noShow" || flaw.effect.kind === "whistle")) {
+    if (flaw && tick.fired && (!win || flaw.effect.kind === "noShow" || flaw.effect.kind === "whistle")) {
       beat = fill(pickAt(flaw.templates, beatRoll), opp.shortName);
     } else if (quipRoll < 0.4) {
       beat = pickAt(win ? opp.winQuips : opp.lossQuips, beatRoll);

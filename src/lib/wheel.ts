@@ -75,6 +75,12 @@ export function tokensFor(flaw: Flaw): Tokens {
   return { team: 1, era: 1, wild: wildFor(flaw.severity) };
 }
 
+/**
+ * v4 economy: every run gets exactly one team re-spin and one era re-spin.
+ * Flaw severity pays cash (Budget) instead of wild re-spins.
+ */
+export const V4_TOKENS: Tokens = { team: 1, era: 1, wild: 0 };
+
 /** Wild tokens not yet consumed covering overflow on either kind. */
 export function wildLeft(tokens: Tokens, used: SpinsUsed): number {
   return tokens.wild - Math.max(0, used.team - tokens.team) - Math.max(0, used.era - tokens.era);

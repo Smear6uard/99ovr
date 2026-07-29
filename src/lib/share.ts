@@ -2,6 +2,7 @@
 
 import { SITE_URL } from "@/config/site";
 import { gradeStrip } from "@/lib/daily";
+import { STEAL_BUDGET } from "@/lib/steal";
 import { TIER_NAMES, tierFor } from "@/lib/tiers";
 import type { SimResult, StealResult } from "@/lib/types";
 
@@ -9,22 +10,44 @@ export function buildUrl(code: string): string {
   return `${SITE_URL}/b/${code}`;
 }
 
+/** The Head to Head challenge link — the code carries the whole duel. */
+export function h2hUrl(code: string): string {
+  return `${SITE_URL}/h2h/${code}`;
+}
+
 function squaresFor(fellAt: number | null): string {
   return fellAt === null ? "🟩".repeat(10) : "🟩".repeat(fellAt - 1) + "🟥" + "⬛".repeat(10 - fellAt);
 }
 
-/** Six Steals share text — same bones as the daily block, plus the duel link. */
+/** "BEST PG BUILD" · "BUDGET" · "CLASSIC" — the headline brand for a run. */
+export function runBrand(result: StealResult): string {
+  const { build } = result;
+  const target = build.target ?? "ALL";
+  if (target !== "ALL") return `Best ${target} Build`;
+  if (build.mode === "budget") return "Budget";
+  if (build.mode === "daily") return `Daily #${build.daily}`;
+  return "Classic";
+}
+
+/** Spin-steal share text — same bones as the daily block, plus the challenge link. */
 export function resultText(result: StealResult, code: string): string {
-  const { fellAt, derived, archetype } = result;
+  const { fellAt, derived, archetype, build } = result;
   const roundLine =
     fellAt === null ? "🏆 Beat all 10 bosses" : `🏀 Round ${fellAt} Boss: ${result.gauntlet[fellAt - 1].shortName}`;
   const lines = [
-    `99OVR — ${derived.ovr} OVR · ${TIER_NAMES[tierFor(derived.ovr)]}`,
+    `99OVR ${runBrand(result)} — ${derived.ovr} OVR · ${TIER_NAMES[tierFor(derived.ovr)]}`,
     gradeStrip(result),
     archetype.name,
   ];
-  if (result.build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
-  lines.push(roundLine, squaresFor(fellAt), `Beat my build → ${buildUrl(code)}`);
+  if (build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
+  if (build.v === 4 && build.mode === "budget") {
+    lines.push(`💰 $${result.spent} of $${STEAL_BUDGET + result.refund} · Flaw: ${result.flaw?.name ?? "—"}`);
+  }
+  const challenge =
+    build.v === 4 && build.mode === "classic"
+      ? `Can you beat it? → ${h2hUrl(code)}`
+      : `Beat my build → ${buildUrl(code)}`;
+  lines.push(roundLine, squaresFor(fellAt), challenge);
   return lines.join("\n");
 }
 

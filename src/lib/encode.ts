@@ -7,7 +7,9 @@ const CURRENT_VERSION = 2;
 const V1_BYTES = 18;
 const V2_BYTES = 21;
 const V3_BYTES = 24;
+const V4_BYTES = 25;
 const POSITION_BYTES: PositionMode[] = ["ALL", "PG", "SG", "SF", "PF", "C"];
+const V4_MODES = ["classic", "daily", "budget"] as const;
 
 function toBase64Url(bytes: Uint8Array): string {
   let bin = "";
@@ -127,6 +129,7 @@ function decodeV2(bytes: Uint8Array): BuildCode | null {
  *   23     xor checksum
  */
 export function encodeSteal(build: StealBuild): string {
+  if (build.v === 4) return encodeStealV4(build);
   const bytes = new Uint8Array(V3_BYTES);
   bytes[0] = 3;
   bytes[1] = (build.mode === "daily" ? 1 : 0) | (build.knowledge ? 0x80 : 0);
@@ -149,7 +152,9 @@ export function encodeSteal(build: StealBuild): string {
 
 export function decodeSteal(code: string): StealBuild | null {
   const bytes = fromBase64Url(code);
-  if (!bytes || bytes.length !== V3_BYTES || bytes[0] !== 3) return null;
+  if (!bytes) return null;
+  if (bytes[0] === 4 && bytes.length === V4_BYTES) return decodeStealV4(bytes);
+  if (bytes[0] !== 3 || bytes.length !== V3_BYTES) return null;
   if (checksum(bytes, 23) !== bytes[23]) return null;
   const flags = modeFrom(bytes[1]);
   if (!flags) return null;
@@ -162,6 +167,66 @@ export function decodeSteal(code: string): StealBuild | null {
     steals,
     attempt: (bytes[19] << 8) | bytes[20],
     daily: (bytes[21] << 8) | bytes[22],
+  };
+  return validateSteals(build) ? build : null;
+}
+
+/* ------------------------------------------------------------------ */
+/* v4 — Four modes                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 25 bytes → 34 base64url chars.
+ *   0      version = 4
+ *   1      mode (0 classic · 1 daily · 2 budget) | knowledge << 7
+ *   2      build target (0 ALL · 1–5 PG…C)
+ *   3–6    seed (u32)
+ *   7      flaw index · 0xff = none (classic/daily)
+ *   8–19   six (bucketIdx, playerIdx) pairs, in ATTRS order
+ *   20–21  attempt (u16)
+ *   22–23  daily (u16)
+ *   24     xor checksum
+ */
+function encodeStealV4(build: StealBuild): string {
+  const bytes = new Uint8Array(V4_BYTES);
+  bytes[0] = 4;
+  const modeIdx = V4_MODES.indexOf(build.mode as (typeof V4_MODES)[number]);
+  bytes[1] = (modeIdx < 0 ? 0 : modeIdx) | (build.knowledge ? 0x80 : 0);
+  bytes[2] = Math.max(0, POSITION_BYTES.indexOf(build.target ?? "ALL"));
+  bytes[3] = (build.seed >>> 24) & 0xff;
+  bytes[4] = (build.seed >>> 16) & 0xff;
+  bytes[5] = (build.seed >>> 8) & 0xff;
+  bytes[6] = build.seed & 0xff;
+  bytes[7] = build.flaw < 0 ? 0xff : build.flaw & 0xff;
+  for (let i = 0; i < ROUNDS; i++) {
+    bytes[8 + i * 2] = build.steals[i][0] & 0xff;
+    bytes[9 + i * 2] = build.steals[i][1] & 0xff;
+  }
+  bytes[20] = (build.attempt >>> 8) & 0xff;
+  bytes[21] = build.attempt & 0xff;
+  bytes[22] = (build.daily >>> 8) & 0xff;
+  bytes[23] = build.daily & 0xff;
+  bytes[24] = checksum(bytes, 24);
+  return toBase64Url(bytes);
+}
+
+function decodeStealV4(bytes: Uint8Array): StealBuild | null {
+  if (checksum(bytes, 24) !== bytes[24]) return null;
+  const mode = V4_MODES[bytes[1] & 0x7f];
+  const target = POSITION_BYTES[bytes[2]];
+  if (!mode || !target) return null;
+  const steals: Array<[number, number]> = [];
+  for (let i = 0; i < ROUNDS; i++) steals.push([bytes[8 + i * 2], bytes[9 + i * 2]]);
+  const build: StealBuild = {
+    v: 4,
+    mode,
+    knowledge: (bytes[1] & 0x80) !== 0,
+    target,
+    seed: ((bytes[3] << 24) | (bytes[4] << 16) | (bytes[5] << 8) | bytes[6]) >>> 0,
+    flaw: bytes[7] === 0xff ? -1 : bytes[7],
+    steals,
+    attempt: (bytes[20] << 8) | bytes[21],
+    daily: (bytes[22] << 8) | bytes[23],
   };
   return validateSteals(build) ? build : null;
 }

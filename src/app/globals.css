@@ -178,6 +178,50 @@ body {
   scrollbar-width: none;
 }
 
+/* ---------------- Arcade pass ---------------- */
+
+/* Jackpot: iconic-era landings flash bright and rattle the card stack */
+@keyframes jackpotShake {
+  0% { transform: translate(0, 0); filter: brightness(1.9); }
+  15% { transform: translate(-3px, 1px) rotate(-0.5deg); }
+  30% { transform: translate(3px, -1px) rotate(0.5deg); filter: brightness(1.4); }
+  45% { transform: translate(-2px, 1px); }
+  60% { transform: translate(2px, -1px); filter: brightness(1.15); }
+  75% { transform: translate(-1px, 0); }
+  100% { transform: none; filter: brightness(1); }
+}
+.jackpot-shake {
+  animation: jackpotShake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Comic sad-trombone drop for the rough-era landings */
+@keyframes wompIn {
+  0% { opacity: 0; transform: translateY(-14px) scale(1.4) rotate(-4deg); }
+  55% { opacity: 1; transform: translateY(2px) scale(0.96) rotate(2deg); }
+  100% { opacity: 0.85; transform: none; }
+}
+.womp-in {
+  animation: wompIn 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+
+/* Blinking NEW HIGH SCORE — classic cabinet attract-mode blink */
+@keyframes blinkHard {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+.blink-hard {
+  animation: blinkHard 0.9s step-end infinite;
+}
+
+/* Marquee-style header glow for the high-score board */
+@keyframes marqueeGlow {
+  0%, 100% { text-shadow: 0 0 8px rgba(242, 185, 75, 0.55), 0 0 22px rgba(242, 185, 75, 0.25); }
+  50% { text-shadow: 0 0 3px rgba(242, 185, 75, 0.3); }
+}
+.marquee-text {
+  animation: marqueeGlow 2.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,18 +1,20 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { BudgetGame } from "@/components/BudgetGame";
+import { BudgetSteals } from "@/components/BudgetSteals";
 
 export const metadata: Metadata = {
-  title: "Budget Ball — the $20 challenge",
+  title: "Budget — the $20 run",
   description:
-    "The original 99OVR: pick a flaw for extra cash, draft eight priced skills on a $20 budget, and beat ten bosses.",
+    "The same six steals with a $20 wallet: every skill has a price, and the mid-run weakness wheel pays you to take a flaw.",
   alternates: { canonical: "/budget" },
+  openGraph: { images: ["/api/og?v=budget"] },
+  twitter: { card: "summary_large_image", images: ["/api/og?v=budget"] },
 };
 
 export default function BudgetPage() {
   return (
     <Suspense fallback={<div className="min-h-[480px]" aria-hidden />}>
-      <BudgetGame />
+      <BudgetSteals />
     </Suspense>
   );
 }

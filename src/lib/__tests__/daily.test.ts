@@ -51,6 +51,13 @@ describe("emoji block", () => {
     expect(clear).toContain("93 OVR HOF");
     expect(clear).not.toContain("Round");
   });
+
+  it("adds the leaderboard rank line only when a rank is known", () => {
+    const result = fakeResult(88, 9, ["A", "A-", "B", "A", "D", "C+"]);
+    expect(formatDailyBlock(result, 372)).not.toContain("🏆");
+    const ranked = formatDailyBlock(result, 372, { rank: 12, total: 431, initials: "ABC" });
+    expect(ranked).toContain("🏆 ABC · #12 of 431 today");
+  });
 });
 
 describe("countdown", () => {

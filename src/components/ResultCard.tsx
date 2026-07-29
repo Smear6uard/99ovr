@@ -45,14 +45,12 @@ export function ResultCard({
   animate = false,
   modeChip,
   challenge,
-  topPct,
 }: {
   result: SimResult;
   animate?: boolean;
   modeChip?: string;
   challenge?: { ovr: number; archetypeName: string } | null;
   /** percentile v1.1 — renders a "TOP N% TODAY" chip when present */
-  topPct?: number | null;
 }) {
   const reduced = usePrefersReducedMotion();
   const { derived, archetype, fellAt, injured, flaw, entries, roast, build } = result;
@@ -160,11 +158,6 @@ export function ResultCard({
           >
             {gauntletLine}
           </span>
-          {typeof topPct === "number" ? (
-            <span className="rounded-sm border border-gold/70 px-2 py-0.5 text-[11px] font-bold tracking-[0.16em] text-gold">
-              TOP {topPct}% TODAY
-            </span>
-          ) : null}
         </div>
 
         {/* Sub-ratings */}

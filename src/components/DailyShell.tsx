@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { dailyNumberFor, dailySeed, formatCountdown, formatDailyBlock, msToNextUtcMidnight, utcDateString } from "@/lib/daily";
 import { decodeSteal } from "@/lib/encode";
 import { useMounted } from "@/lib/hooks";
-import { submitDailyRank } from "@/lib/rankClient";
+import { fetchDailyBoard, submitDailyScore, type LbBoard } from "@/lib/leaderboardClient";
 import { resultText } from "@/lib/share";
+import { playSfx } from "@/lib/sfx";
 import { simulateSteals } from "@/lib/steal";
-import { attachDailyPercentile, getDailyState, recordOfficialDaily, type DailyState } from "@/lib/storage";
+import { attachDailyRank, getDailyState, getSavedInitials, recordOfficialDaily, saveInitials, type DailyState } from "@/lib/storage";
 import type { StealResult } from "@/lib/types";
 import { StealFlow } from "@/components/StealFlow";
 import { GauntletLog } from "@/components/GauntletLog";
+import { InitialsEntry, Leaderboard } from "@/components/Leaderboard";
 import { StealCard } from "@/components/StealCard";
 import { ShareRow } from "@/components/ShareRow";
 
@@ -23,18 +25,19 @@ function Countdown() {
   return <span className="tabular-nums">{formatCountdown(ms)}</span>;
 }
 
+type LbPhase = "entry" | "submitting" | "done" | "skipped" | "unavailable";
+
 /**
- * The daily: seeded by UTC date, identical for everyone, one official run,
- * streak in localStorage, practice unlimited but marked.
+ * The daily: seeded by UTC date, identical spins and rosters for everyone,
+ * one official run, streak in localStorage, arcade leaderboard in KV.
  */
 export function DailyShell() {
   const mounted = useMounted();
   const [state, setState] = useState<DailyState | null>(null);
   const [practicing, setPracticing] = useState(false);
-  const [topPct, setTopPct] = useState<number | null>(null);
-  /** true while this session's own official run is on screen — keeps the
-   * animated reveal up instead of snapping to the locked recap */
-  const [livePlaythrough, setLivePlaythrough] = useState(false);
+  const [board, setBoard] = useState<LbBoard | null>(null);
+  const [lbPhase, setLbPhase] = useState<LbPhase>("entry");
+  const [liveOfficial, setLiveOfficial] = useState<{ result: StealResult; code: string } | null>(null);
 
   const today = useMemo(() => {
     const date = utcDateString();
@@ -45,10 +48,60 @@ export function DailyShell() {
     if (!mounted) return;
     const s = getDailyState();
     setState(s);
-    if (s.last?.date === today.date && typeof s.last.topPct === "number") {
-      setTopPct(s.last.topPct);
+    if (s.last?.date === today.date) {
+      if (typeof s.last.rank === "number") setLbPhase("done");
+      void fetchDailyBoard(s.last.member).then((b) => {
+        if (!b) return;
+        setBoard(b);
+        // rank can drift as others post — keep the display honest
+        if (typeof b.rank === "number") {
+          setState((prev) =>
+            prev?.last?.date === today.date ? { ...prev, last: { ...prev.last, rank: b.rank! } } : prev
+          );
+        }
+      });
     }
   }, [mounted, today.date]);
+
+  const submitInitials = useCallback(
+    (initials: string) => {
+      const stored = state?.last?.date === today.date ? state.last : null;
+      const code = liveOfficial?.code ?? stored?.code;
+      if (!code) return;
+      const result =
+        liveOfficial?.result ??
+        (() => {
+          const build = decodeSteal(code);
+          return build ? simulateSteals(build) : null;
+        })();
+      saveInitials(initials);
+      setLbPhase("submitting");
+      void submitDailyScore(code, initials).then((b) => {
+        if (!b || typeof b.rank !== "number") {
+          setLbPhase("unavailable");
+          return;
+        }
+        playSfx(b.rank <= 10 ? "jackpot" : "cash");
+        setBoard(b);
+        setLbPhase("done");
+        if (result) {
+          const block = formatDailyBlock(result, today.number, {
+            rank: b.rank,
+            total: b.total ?? 0,
+            initials,
+          });
+          setState(
+            attachDailyRank(
+              today.date,
+              { initials, rank: b.rank, total: b.total ?? 0, member: b.member },
+              block
+            )
+          );
+        }
+      });
+    },
+    [state, liveOfficial, today]
+  );
 
   if (!mounted || !state) {
     return <div className="min-h-[480px]" aria-hidden />;
@@ -62,6 +115,29 @@ export function DailyShell() {
           return build ? simulateSteals(build) : null;
         })()
       : null;
+
+  const leaderboardPanel = (
+    <>
+      {lbPhase === "entry" && (liveOfficial || playedToday) ? (
+        <InitialsEntry
+          defaultInitials={getSavedInitials()}
+          submitting={false}
+          onSubmit={submitInitials}
+          onSkip={() => setLbPhase("skipped")}
+        />
+      ) : null}
+      {lbPhase === "submitting" ? (
+        <InitialsEntry defaultInitials={getSavedInitials()} submitting onSubmit={() => {}} onSkip={() => {}} />
+      ) : null}
+      {lbPhase === "done" && board ? (
+        <Leaderboard board={board} yourRank={state.last?.rank ?? board.rank} yourInitials={state.last?.initials} />
+      ) : null}
+      {lbPhase === "skipped" && board ? <Leaderboard board={board} /> : null}
+      {lbPhase === "unavailable" ? (
+        <p className="text-center text-[11px] text-dim">Leaderboard is off the grid right now. Your run still counts here.</p>
+      ) : null}
+    </>
+  );
 
   return (
     <div>
@@ -81,7 +157,7 @@ export function DailyShell() {
         </div>
       </div>
 
-      {!playedToday || livePlaythrough ? (
+      {!playedToday || liveOfficial ? (
         <>
           {!playedToday ? (
             <div className="mb-4 rounded-lg border border-gold/50 bg-panel p-3 text-[13px]">
@@ -96,9 +172,9 @@ export function DailyShell() {
             fixedSeed={today.seed}
             daily={{ number: today.number, date: today.date }}
             official
-            topPct={topPct}
+            officialExtras={leaderboardPanel}
             onOfficialComplete={(result, code, block) => {
-              setLivePlaythrough(true);
+              setLiveOfficial({ result, code });
               const next = recordOfficialDaily({
                 date: today.date,
                 number: today.number,
@@ -109,13 +185,7 @@ export function DailyShell() {
                 block,
               });
               setState(next);
-              // percentile v1.1 — fire-and-forget; null means the feature is off
-              void submitDailyRank(code).then((pct) => {
-                if (pct === null) return;
-                const withPct = formatDailyBlock(result, today.number, pct);
-                setTopPct(pct);
-                setState(attachDailyPercentile(today.date, pct, withPct));
-              });
+              void fetchDailyBoard().then((b) => b && setBoard(b));
             }}
           />
         </>
@@ -135,11 +205,7 @@ export function DailyShell() {
         <div>
           {official ? (
             <>
-              <StealCard
-                result={official}
-                modeChip={`DAILY #${today.number} · OFFICIAL`}
-                topPct={state.last?.topPct ?? null}
-              />
+              <StealCard result={official} modeChip={`DAILY #${today.number} · OFFICIAL`} />
               <ShareRow
                 summary={{ ovr: official.derived.ovr, archetypeName: official.archetype.name }}
                 text={resultText(official, state.last!.code)}
@@ -148,6 +214,8 @@ export function DailyShell() {
               />
             </>
           ) : null}
+
+          <div className="mt-6">{leaderboardPanel}</div>
 
           <div className="mt-6 rounded-lg border border-line bg-panel p-4 text-center">
             <p className="text-[11px] font-bold tracking-[0.2em] text-dim">TODAY IS LOCKED IN</p>

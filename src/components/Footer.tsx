@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DONATE_URL } from "@/config/ads";
+import { SfxToggle } from "@/components/SfxToggle";
 
 export function Footer() {
   return (
@@ -16,6 +17,7 @@ export function Footer() {
         <Link href="/daily" className="underline underline-offset-2 hover:text-paper">
           Daily challenge
         </Link>
+        <SfxToggle />
         {DONATE_URL ? (
           <a href={DONATE_URL} className="underline underline-offset-2 hover:text-paper">
             keep the servers alive ☕

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { GRADE_HEX } from "@/lib/grade";
 import { usePrefersReducedMotion } from "@/lib/hooks";
+import { STEAL_BUDGET } from "@/lib/steal";
 import { TIER_HEX, TIER_NAMES, tierFor } from "@/lib/tiers";
 import { ATTR_ABBR, ATTR_LABELS, type StealResult } from "@/lib/types";
 import { Odometer } from "@/components/Odometer";
@@ -34,16 +35,19 @@ export function StealCard({
   animate = false,
   modeChip,
   challenge,
-  topPct,
+  rank,
 }: {
   result: StealResult;
   animate?: boolean;
   modeChip?: string;
   challenge?: { ovr: number; archetypeName: string } | null;
-  topPct?: number | null;
+  /** daily leaderboard placement, when known */
+  rank?: { rank: number; total: number } | null;
 }) {
   const reduced = usePrefersReducedMotion();
   const { derived, archetype, fellAt, injured, flaw, steals, roast, build } = result;
+  const target = build.target ?? "ALL";
+  const budgetMode = build.v === 4 && build.mode === "budget";
   const [shown, setShown] = useState(animate ? 0 : derived.ovr);
   const [stamped, setStamped] = useState(!animate);
 
@@ -83,6 +87,9 @@ export function StealCard({
             {build.knowledge ? (
               <span className="rounded-sm border border-gold/70 px-1.5 py-0.5 text-gold">🧠 BALL KNOWLEDGE</span>
             ) : null}
+            {target !== "ALL" ? (
+              <span className="rounded-sm border border-gold/70 px-1.5 py-0.5 text-gold">BEST {target}</span>
+            ) : null}
             {modeChip ? <span className="rounded-sm border border-line px-1.5 py-0.5">{modeChip}</span> : null}
             <span className="rounded-sm border border-line px-1.5 py-0.5">SIM #{build.attempt + 1}</span>
           </span>
@@ -119,7 +126,10 @@ export function StealCard({
           <div className="-mt-1 font-display text-3xl uppercase tracking-wide" style={{ color: hex }}>
             {TIER_NAMES[tier]}
           </div>
-          <div className="mt-1 text-[11px] font-semibold tracking-[0.25em] text-paper">{derived.ovr} OVR</div>
+          <div className="mt-1 text-[11px] font-semibold tracking-[0.25em] text-paper">
+            {target !== "ALL" ? `BEST ${target} BUILD — ` : ""}
+            {derived.ovr} OVR
+          </div>
         </div>
 
         {/* The stamp */}
@@ -157,9 +167,9 @@ export function StealCard({
           <span className="text-[12px] font-bold tracking-[0.14em]" style={{ color: fellAt === null ? "#3fb68b" : "#e5484d" }}>
             {gauntletLine}
           </span>
-          {typeof topPct === "number" ? (
+          {rank ? (
             <span className="rounded-sm border border-gold/70 px-2 py-0.5 text-[11px] font-bold tracking-[0.16em] text-gold">
-              TOP {topPct}% TODAY
+              #{rank.rank} OF {rank.total} TODAY
             </span>
           ) : null}
         </div>
@@ -202,16 +212,41 @@ export function StealCard({
                   {ATTR_LABELS[steal.attr].toUpperCase()} · {steal.bucket.label}
                 </span>
               </span>
+              {budgetMode ? (
+                <span className="shrink-0 font-display text-[13px] text-gold" aria-label={`cost $${steal.price}`}>
+                  ${steal.price}
+                </span>
+              ) : null}
             </div>
           ))}
         </div>
 
-        {/* The flaw */}
-        <div className="mt-4 border-l-2 border-loss pl-3 text-[12px]">
-          <span className="mr-2 text-[10px] font-bold tracking-[0.18em] text-loss">FLAW</span>
-          <span className="font-semibold">{flaw.name}</span>
-          <span className="ml-2 text-[10px] tracking-[0.14em] text-dim">{flaw.severity.toUpperCase()}</span>
-        </div>
+        {/* The flaw — Budget (and v3) only */}
+        {flaw ? (
+          <div className="mt-4 border-l-2 border-loss pl-3 text-[12px]">
+            <span className="mr-2 text-[10px] font-bold tracking-[0.18em] text-loss">FLAW</span>
+            <span className="font-semibold">{flaw.name}</span>
+            <span className="ml-2 text-[10px] tracking-[0.14em] text-dim">
+              {flaw.severity.toUpperCase()}
+              {budgetMode ? ` · +$${result.refund} BACK` : ""}
+            </span>
+          </div>
+        ) : null}
+
+        {/* The receipt — Budget only */}
+        {budgetMode ? (
+          <div className="mt-3 flex items-center justify-between border-l-2 border-gold pl-3 text-[12px]">
+            <span>
+              <span className="mr-2 text-[10px] font-bold tracking-[0.18em] text-gold">BUDGET</span>
+              <span className="font-semibold">
+                ${result.spent} spent of ${STEAL_BUDGET + result.refund}
+              </span>
+            </span>
+            <span className="text-[10px] tracking-[0.14em] text-dim">
+              ${STEAL_BUDGET + result.refund - result.spent} LEFT OVER
+            </span>
+          </div>
+        ) : null}
 
         {/* The roast */}
         <div className={`relative mt-4 ${lateReveal}`} style={{ animationDelay: "0.4s" }}>

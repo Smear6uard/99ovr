@@ -42,11 +42,13 @@ export function gradeStrip(result: StealResult): string {
   return result.steals.map((steal) => `${gradeEmoji(steal.grade)}${steal.grade}`).join(" ");
 }
 
+export type DailyRank = { rank: number; total: number; initials?: string };
+
 /**
  * The copy-paste block. Format is load-bearing — see daily.test.ts.
- * `topPct` (percentile v1.1) adds one line when known.
+ * A leaderboard rank adds one line when known.
  */
-export function formatDailyBlock(result: StealResult, dailyNo: number, topPct?: number | null): string {
+export function formatDailyBlock(result: StealResult, dailyNo: number, rank?: DailyRank | null): string {
   const { fellAt, derived } = result;
   const outcome = fellAt === null ? "Beat all 10" : `Round ${fellAt}`;
   const tier = TIER_NAMES[tierFor(derived.ovr)].toUpperCase();
@@ -54,6 +56,8 @@ export function formatDailyBlock(result: StealResult, dailyNo: number, topPct?: 
     `99OVR Daily #${dailyNo}`,
     `${gradeStrip(result)} · ${derived.ovr} OVR ${tier} · ${outcome} ⟶ 99ovr.app`,
   ];
-  if (typeof topPct === "number") lines.push(`📊 Top ${topPct}% today`);
+  if (rank && typeof rank.rank === "number" && typeof rank.total === "number") {
+    lines.push(`🏆 ${rank.initials ? `${rank.initials} · ` : ""}#${rank.rank} of ${rank.total} today`);
+  }
   return lines.join("\n");
 }

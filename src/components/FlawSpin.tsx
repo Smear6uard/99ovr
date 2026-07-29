@@ -141,7 +141,9 @@ export function FlawSpin({
   return (
     <div className="flex min-h-[64vh] flex-col pt-2">
       <div className="mt-3 text-center">
-        <span className="block text-[10px] font-bold tracking-[0.3em] text-loss/80">STEP 1 · PICK YOUR POISON</span>
+        <span className="block text-[10px] font-bold tracking-[0.3em] text-loss/80">
+          {economy === "budget" ? "MID-RUN BREAK · THE WEAKNESS WHEEL" : "STEP 1 · PICK YOUR POISON"}
+        </span>
         <h1 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
           {reel === "landed" ? (
             "Pick one"
@@ -153,6 +155,12 @@ export function FlawSpin({
             </>
           )}
         </h1>
+        {economy === "budget" && reel !== "landed" ? (
+          <p className="mx-auto mt-2 max-w-[19rem] text-[12px] leading-snug text-dim">
+            Three steals down, three to go. Take a weakness — the worse it is, the more budget it refunds for the
+            back half.
+          </p>
+        ) : null}
       </div>
 
       {/* Stage */}
@@ -193,7 +201,7 @@ export function FlawSpin({
                   onClick={onAccept}
                   className="fade-up w-full rounded-lg bg-gold py-3.5 font-display text-xl uppercase tracking-wide text-ink shadow-[0_8px_28px_rgba(242,185,75,0.3)] transition-transform active:scale-[0.99]"
                 >
-                  Take flaw & build
+                  {economy === "budget" ? "Take the flaw & the cash" : "Take flaw & build"}
                 </button>
               ) : null}
             </div>

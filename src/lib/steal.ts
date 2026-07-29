@@ -1,18 +1,21 @@
 import { BUCKETS } from "@/data/eras";
 import { FLAWS } from "@/data/flaws";
-import { GAUNTLET } from "@/data/gauntlet";
+import { GAUNTLET, POSITION_GAUNTLETS } from "@/data/gauntlet";
 import { ARCHETYPES } from "@/data/archetypes";
 import { fnv1a, mulberry32 } from "@/lib/rng";
 import { bandFor, curve, pickRoast, runGauntlet } from "@/lib/sim";
 import { gradeFor, gradeScore, verdictFor } from "@/lib/grade";
-import { ROUNDS, minSpinsFor, spinsAffordable, tokensFor } from "@/lib/wheel";
+import { ROUNDS, V4_TOKENS, minSpinsFor, spinsAffordable, tokensFor } from "@/lib/wheel";
 import {
   ATTRS,
   ATTR_LABELS,
+  POSITIONS,
   type Archetype,
   type AttrId,
   type EraBucket,
   type EraPlayer,
+  type PositionMode,
+  type Price,
   type Steal,
   type StealBuild,
   type StealDerived,
@@ -62,6 +65,47 @@ function activeSynergies(ratings: Record<AttrId, number>, steals: Steal[]): Stea
 }
 
 /* ------------------------------------------------------------------ */
+/* Budget mode — prices                                                */
+/* ------------------------------------------------------------------ */
+
+/** The whole run's wallet. Flaw severity refunds land after the wheel. */
+export const STEAL_BUDGET = 20;
+/** The weakness wheel interrupts after this many steals. */
+export const WHEEL_AFTER = 3;
+
+/** Same bands the original priced pool used: $5 93+ · $4 86+ · $3 78+ · $2 68+ · $1 below. */
+export function priceForRating(rating: number): Price {
+  if (rating >= 93) return 5;
+  if (rating >= 86) return 4;
+  if (rating >= 78) return 3;
+  if (rating >= 68) return 2;
+  return 1;
+}
+
+/**
+ * Band price, except the roster's worst at the attribute is always the $1
+ * minimum contract — every roster stays affordable, every round.
+ */
+export function priceIn(bucket: EraBucket, attrIdx: number, playerIdx: number): Price {
+  const rating = bucket.players[playerIdx].r[attrIdx];
+  const min = Math.min(...bucket.players.map((p) => p.r[attrIdx]));
+  return rating === min ? 1 : priceForRating(rating);
+}
+
+/** Dollars available on a given round — the refund arrives with the wheel. */
+export function budgetCapAt(round: number, refund: number): number {
+  return STEAL_BUDGET + (round >= WHEEL_AFTER ? refund : 0);
+}
+
+/**
+ * A Budget pick is legal only if it leaves $1 for every remaining round.
+ * Combined with the minimum-contract rule, a run can never wedge itself broke.
+ */
+export function canAffordSteal(spentBefore: number, price: number, round: number, refund: number): boolean {
+  return spentBefore + price <= budgetCapAt(round, refund) - (ROUNDS - 1 - round);
+}
+
+/* ------------------------------------------------------------------ */
 /* Grading                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -79,13 +123,30 @@ export function bestIn(bucket: EraBucket, attrIdx: number): EraPlayer {
 /* ------------------------------------------------------------------ */
 
 export function validateSteals(build: StealBuild): boolean {
-  if (build.v !== 3) return false;
-  if (build.flaw < 0 || build.flaw >= FLAWS.length) return false;
+  if (build.v !== 3 && build.v !== 4) return false;
   if (!Array.isArray(build.steals) || build.steals.length !== ROUNDS) return false;
 
-  const tokens = tokensFor(FLAWS[build.flaw]);
+  const v4 = build.v === 4;
+  if (v4) {
+    if (build.mode !== "classic" && build.mode !== "daily" && build.mode !== "budget") return false;
+    const target = build.target ?? "ALL";
+    if (target !== "ALL" && !POSITIONS.includes(target)) return false;
+    if (build.mode === "budget") {
+      if (build.flaw < 0 || build.flaw >= FLAWS.length) return false;
+    } else if (build.flaw !== -1) {
+      return false;
+    }
+  } else {
+    if (build.mode !== "sandbox" && build.mode !== "daily") return false;
+    if (build.flaw < 0 || build.flaw >= FLAWS.length) return false;
+  }
+
+  const tokens = v4 ? V4_TOKENS : tokensFor(FLAWS[build.flaw]);
+  const budgetMode = v4 && build.mode === "budget";
+  const refund = budgetMode ? FLAWS[build.flaw].refund : 0;
   const used = { team: 0, era: 0 };
   const people = new Set<string>();
+  let spent = 0;
 
   for (let round = 0; round < ROUNDS; round++) {
     const pair = build.steals[round];
@@ -102,6 +163,12 @@ export function validateSteals(build: StealBuild): boolean {
     if (!spins) return false;
     used.team += spins.team;
     used.era += spins.era;
+
+    if (budgetMode) {
+      const price = priceIn(bucket, round, playerIdx);
+      if (!canAffordSteal(spent, price, round, refund)) return false;
+      spent += price;
+    }
   }
 
   return spinsAffordable(used, tokens);
@@ -133,6 +200,7 @@ export function stealsFor(build: StealBuild): Steal[] | null {
       best,
       grade,
       verdict,
+      price: priceIn(bucket, round, playerIdx),
       spins: minSpinsFor(build.seed, round, bucketIdx)!,
     };
   });
@@ -142,7 +210,24 @@ export function stealsFor(build: StealBuild): Steal[] | null {
 /* Derived                                                             */
 /* ------------------------------------------------------------------ */
 
-export function deriveSteals(steals: Steal[]): StealDerived {
+/**
+ * Positional scoring weights. `ALL` is byte-identical to the v3 formula —
+ * old codes replay unchanged. A positional target re-weights what counts:
+ * C trades shot creation for rim pressure and defense, PG buys playmaking
+ * and creation, and so on down the line.
+ */
+type TargetProfile = { sc: number; rp: number; play: number; oOff: number; oDef: number; oPlay: number };
+
+export const TARGET_PROFILES: Record<PositionMode, TargetProfile> = {
+  ALL: { sc: 0.42, rp: 0.3, play: 0.28, oOff: 0.52, oDef: 0.36, oPlay: 0.12 },
+  PG: { sc: 0.46, rp: 0.18, play: 0.36, oOff: 0.54, oDef: 0.28, oPlay: 0.18 },
+  SG: { sc: 0.5, rp: 0.28, play: 0.22, oOff: 0.56, oDef: 0.32, oPlay: 0.12 },
+  SF: { sc: 0.44, rp: 0.32, play: 0.24, oOff: 0.5, oDef: 0.38, oPlay: 0.12 },
+  PF: { sc: 0.34, rp: 0.44, play: 0.22, oOff: 0.46, oDef: 0.44, oPlay: 0.1 },
+  C: { sc: 0.24, rp: 0.54, play: 0.22, oOff: 0.42, oDef: 0.5, oPlay: 0.08 },
+};
+
+export function deriveSteals(steals: Steal[], target: PositionMode = "ALL"): StealDerived {
   const ratings = {} as Record<AttrId, number>;
   for (const steal of steals) ratings[steal.attr] = steal.rating;
 
@@ -153,15 +238,21 @@ export function deriveSteals(steals: Steal[]): StealDerived {
       .reduce((acc, s) => acc + s.amount, 0);
 
   const { jumpshot, handles, finishing, playmaking, defense, athleticism } = ratings;
+  const profile = TARGET_PROFILES[target] ?? TARGET_PROFILES.ALL;
 
   const shotCreationRaw = jumpshot * (0.6 + 0.4 * (handles / 99)) + bonus("sc");
   const rimPressureRaw = finishing * (0.55 + 0.45 * (athleticism / 99)) + bonus("rp");
-  const offenseRaw = 0.42 * shotCreationRaw + 0.3 * rimPressureRaw + 0.28 * playmaking + bonus("off");
+  const offenseRaw =
+    profile.sc * shotCreationRaw + profile.rp * rimPressureRaw + profile.play * playmaking + bonus("off");
   const defenseRaw = defense * (0.7 + 0.3 * (athleticism / 99)) + bonus("def");
 
   const offense = Math.round(curve(offenseRaw));
   const defenseScore = Math.round(curve(defenseRaw));
-  const ovr = clamp(Math.round(0.52 * offense + 0.36 * defenseScore + 0.12 * playmaking), 40, 98);
+  const ovr = clamp(
+    Math.round(profile.oOff * offense + profile.oDef * defenseScore + profile.oPlay * playmaking),
+    40,
+    98
+  );
 
   const synergies: SynergyHit[] = syn.map((s) => ({
     id: s.id,
@@ -222,18 +313,23 @@ export function assignStealArchetype(d: StealDerived, steals: Steal[]): Archetyp
 export function stealSimSeed(build: StealBuild, steals: Steal[]): number {
   const ids = steals.map((s) => s.player.id).join(".");
   const dailyKey = build.mode === "daily" ? `d${build.daily}` : "";
+  if (build.v === 4) {
+    const flawId = build.flaw >= 0 ? FLAWS[build.flaw].id : "none";
+    return fnv1a(`${ids}#${flawId}#v4:${build.mode}#${build.target ?? "ALL"}#${dailyKey}#${build.attempt}`);
+  }
   return fnv1a(`${ids}#${FLAWS[build.flaw].id}#${build.mode}#${dailyKey}#${build.attempt}`);
 }
 
-/** The whole v3 game, purely: build in, story out. Same build ⇒ same story. */
+/** The whole spin-steal game, purely: build in, story out. Same build ⇒ same story. */
 export function simulateSteals(build: StealBuild): StealResult | null {
   const steals = stealsFor(build);
   if (!steals) return null;
 
-  const flaw = FLAWS[build.flaw];
-  const derived = deriveSteals(steals);
+  const flaw = build.flaw >= 0 ? FLAWS[build.flaw] : null;
+  const target: PositionMode = build.v === 4 ? (build.target ?? "ALL") : "ALL";
+  const derived = deriveSteals(steals, target);
   const simSeed = stealSimSeed(build, steals);
-  const gauntlet = GAUNTLET;
+  const gauntlet = target !== "ALL" ? POSITION_GAUNTLETS[target] : GAUNTLET;
   const { rungs, fellAt, injured } = runGauntlet(
     { playerPower: derived.playerPower, fatigueMod: derived.fatigueMod, durability: 75 },
     flaw,
@@ -245,16 +341,20 @@ export function simulateSteals(build: StealBuild): StealResult | null {
   const archetype = assignStealArchetype(derived, steals);
   const last = rungs[rungs.length - 1];
   const flawDecisive = fellAt !== null && !!last && last.flawFired;
-  const roast = pickRoast(simSeed, archetype.id, band, flaw.id, flawDecisive);
+  const roast = pickRoast(simSeed, archetype.id, band, flaw?.id ?? "none", flawDecisive);
 
   const ranked = [...steals].sort(
     (a, b) => gradeScore(b.grade) - gradeScore(a.grade) || b.rating - a.rating
   );
+  const budgetMode = build.v === 4 && build.mode === "budget";
 
   return {
     build,
     steals,
     flaw,
+    spent: budgetMode ? steals.reduce((acc, s) => acc + s.price, 0) : 0,
+    refund: budgetMode && flaw ? flaw.refund : 0,
+    gradePoints: steals.reduce((acc, s) => acc + gradeScore(s.grade), 0),
     derived,
     rungs,
     fellAt,

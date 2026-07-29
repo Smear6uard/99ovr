@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { BUCKETS } from "@/data/eras";
-import { decodeSteal } from "@/lib/encode";
-import { simulateSteals } from "@/lib/steal";
+import { decodeSteal, encodeSteal } from "@/lib/encode";
+import { canAffordSteal, priceIn, simulateSteals } from "@/lib/steal";
 import { ROUNDS, bucketIndexAt } from "@/lib/wheel";
-import { ATTR_LABELS, ATTRS } from "@/lib/types";
+import { ATTR_LABELS, ATTRS, type StealBuild } from "@/lib/types";
 import { StealFlow } from "@/components/StealFlow";
 
 const SEED = 0xc0ffee;
@@ -30,18 +30,17 @@ const click = async (el: Element) => {
   });
 };
 
-/** Plays a whole run: flaw → six steals → verdict → result. */
-async function playFullRun(opts: { knowledge?: boolean } = {}) {
+const waitSim = async () => {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 700));
+  });
+};
+
+/** Plays a whole Classic run: six steals, no flaw anywhere, straight to the verdict. */
+async function playClassicRun(opts: { knowledge?: boolean } = {}) {
   stubMatchMedia(true); // reduced motion: reels resolve immediately, no timers to chase
-  render(<StealFlow mode="sandbox" fixedSeed={SEED} knowledge={opts.knowledge} />);
+  render(<StealFlow mode="classic" fixedSeed={SEED} knowledge={opts.knowledge} />);
 
-  // ---- flaw step
-  await click(screen.getByRole("button", { name: /^spin$/i }));
-  const flawCards = screen.getAllByRole("button", { pressed: false });
-  await click(flawCards[0]);
-  await click(screen.getByRole("button", { name: /take flaw & build/i }));
-
-  // ---- six steals, always taking the roster's best for that attribute
   const taken = new Set<string>();
   const expected: Array<[number, number]> = [];
   for (let round = 0; round < ROUNDS; round++) {
@@ -75,73 +74,117 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("a full Six Steals run", () => {
-  it("goes gamble → knowledge test → judgment and lands on the result", async () => {
-    const expected = await playFullRun();
+describe("a full Classic run", () => {
+  it("has no flaw step and lands on one verdict screen after the sim beat", async () => {
+    const expected = await playClassicRun();
 
-    // ---- the sim ticker, then the verdict sequence
+    // after the sixth steal there is no walkthrough — just the sim beat...
     expect(screen.queryByText(/ROUND 6 \/ 6/)).toBeNull();
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 700));
-    });
+    await waitSim();
 
-    expect(screen.getByText(/THE VERDICT/)).toBeTruthy();
-
-    // six grade slides, then the bookends, then the card
-    for (let i = 0; i < ROUNDS; i++) {
-      expect(screen.getByText(new RegExp(`ROUND ${i + 1} · ${ATTR_LABELS[ATTRS[i]].toUpperCase()}`))).toBeTruthy();
-      await click(screen.getByRole("button", { name: /^next$/i }));
-    }
+    // ...then everything on a single screen, zero taps required
+    expect(screen.getByText("Run it back")).toBeTruthy();
     expect(screen.getByText("BEST STEAL")).toBeTruthy();
     expect(screen.getByText("THE REACH")).toBeTruthy();
-    await click(screen.getByRole("button", { name: /see the number/i }));
+    expect(screen.getByText(/VIEW LOG/i)).toBeTruthy();
+    expect(screen.getByText(/challenge a friend/i)).toBeTruthy();
 
-    // ---- the result card matches an independent simulation of the same run
+    // the result matches an independent simulation of the same run
     const expectedResult = simulateSteals({
-      v: 3, mode: "sandbox", seed: SEED,
-      flaw: 0, steals: expected, attempt: 0, daily: 0, knowledge: false,
+      v: 4, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      steals: expected, attempt: 0, daily: 0, knowledge: false,
     });
-    expect(screen.getByText("Run it back")).toBeTruthy();
-    expect(screen.getAllByText(/OVR$/).length).toBeGreaterThan(0);
-
-    // taking every roster's best should grade out near the top
     expect(expectedResult).not.toBeNull();
+    expect(expectedResult!.flaw).toBeNull();
     expect(expectedResult!.steals.every((s) => s.rank === 0)).toBe(true);
     expect(expectedResult!.bestSteal.grade).toBe("A+");
+    // no flaw section on a classic card
+    expect(screen.queryByText(/^FLAW$/)).toBeNull();
   });
 
   it("never offers the same player twice across a run", async () => {
-    const expected = await playFullRun();
+    const expected = await playClassicRun();
     const people = expected.map(([b, p]) => BUCKETS[b].players[p].person);
     expect(new Set(people).size).toBe(people.length);
   });
 
   it("produces a share code that decodes back to the same run", async () => {
-    const expected = await playFullRun();
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 700));
-    });
-    for (let i = 0; i <= ROUNDS; i++) {
-      const btn = screen.queryByRole("button", { name: /^next$|see the number/i });
-      if (btn) await click(btn);
-    }
-    // the flow encodes the run it just played; decoding must reproduce it
+    const expected = await playClassicRun();
+    await waitSim();
     const rebuilt = simulateSteals({
-      v: 3, mode: "sandbox", seed: SEED,
-      flaw: 0, steals: expected, attempt: 0, daily: 0, knowledge: false,
+      v: 4, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      steals: expected, attempt: 0, daily: 0, knowledge: false,
     })!;
-    const code = (await import("@/lib/encode")).encodeSteal(rebuilt.build);
+    const code = encodeSteal(rebuilt.build);
     expect(decodeSteal(code)).toEqual(rebuilt.build);
+  });
+});
+
+describe("a full Budget run", () => {
+  it("shows prices, breaks for the weakness wheel after three steals, and prints the receipt", async () => {
+    stubMatchMedia(true);
+    render(<StealFlow mode="budget" fixedSeed={SEED} />);
+
+    const taken = new Set<string>();
+    const steals: Array<[number, number]> = [];
+    let spent = 0;
+    let flawIdx = -1;
+
+    for (let round = 0; round < ROUNDS; round++) {
+      if (round === 3) {
+        // the mid-run break: spin the weakness wheel, take the first flaw offered
+        expect(screen.getByText(/WEAKNESS WHEEL/i)).toBeTruthy();
+        await click(screen.getByRole("button", { name: /^spin$/i }));
+        await click(screen.getAllByRole("button", { pressed: false })[0]);
+        const { drawFlaws } = await import("@/lib/shop");
+        flawIdx = drawFlaws(SEED)[0];
+        await click(screen.getByRole("button", { name: /take the flaw & the cash/i }));
+      }
+
+      await click(screen.getByRole("button", { name: /^spin$/i }));
+      const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
+      const bucket = BUCKETS[bucketIdx];
+      const refund = flawIdx >= 0 ? (await import("@/data/flaws")).FLAWS[flawIdx].refund : 0;
+      const pick = bucket.players
+        .map((player, index) => ({ player, index, price: priceIn(bucket, round, index) }))
+        .filter(({ player }) => !taken.has(player.person))
+        .filter(({ price }) => canAffordSteal(spent, price, round, refund))
+        .sort((a, b) => b.player.r[round] - a.player.r[round])[0];
+      taken.add(pick.player.person);
+      spent += pick.price;
+      steals.push([bucketIdx, pick.index]);
+
+      // roster rows carry a price in their accessible names
+      await click(
+        screen.getByRole("button", {
+          name: new RegExp(
+            `Steal ${ATTR_LABELS[ATTRS[round]]} from ${pick.player.name} for \\$${pick.price}`,
+            "i"
+          ),
+        })
+      );
+    }
+
+    await waitSim();
+    expect(screen.getByText("Run it back")).toBeTruthy();
+    // the card carries flaw + refund and the budget receipt
+    const build: StealBuild = {
+      v: 4, mode: "budget", seed: SEED, flaw: flawIdx, target: "ALL",
+      steals, attempt: 0, daily: 0, knowledge: false,
+    };
+    const result = simulateSteals(build)!;
+    expect(result.spent).toBe(spent);
+    expect(screen.getByText(new RegExp(`\\$${spent} spent of`))).toBeTruthy();
+    expect(screen.getAllByText(result.flaw!.name).length).toBeGreaterThan(0);
+    // budget runs never mint H2H challenges
+    expect(screen.queryByText(/challenge a friend/i)).toBeNull();
   });
 });
 
 describe("Ball Knowledge", () => {
   it("hides the box lines but still lists every name", async () => {
     stubMatchMedia(true);
-    render(<StealFlow mode="sandbox" fixedSeed={SEED} knowledge />);
-    await click(screen.getByRole("button", { name: /^spin$/i }));
-    await click(screen.getAllByRole("button", { pressed: false })[0]);
-    await click(screen.getByRole("button", { name: /take flaw & build/i }));
+    render(<StealFlow mode="classic" fixedSeed={SEED} knowledge />);
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
     const bucket = BUCKETS[bucketIndexAt(SEED, 0, 0, 0)];
@@ -155,10 +198,7 @@ describe("Ball Knowledge", () => {
 
   it("shows box lines when the modifier is off", async () => {
     stubMatchMedia(true);
-    render(<StealFlow mode="sandbox" fixedSeed={SEED} />);
-    await click(screen.getByRole("button", { name: /^spin$/i }));
-    await click(screen.getAllByRole("button", { pressed: false })[0]);
-    await click(screen.getByRole("button", { name: /take flaw & build/i }));
+    render(<StealFlow mode="classic" fixedSeed={SEED} />);
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
     const list = screen.getByRole("list");
@@ -167,19 +207,9 @@ describe("Ball Knowledge", () => {
 });
 
 describe("re-spins", () => {
-  it("spends a token, moves the wheel, and disables the button when spent", async () => {
+  it("gives exactly one team and one era re-spin, then disables both", async () => {
     stubMatchMedia(true);
-    render(<StealFlow mode="sandbox" fixedSeed={SEED} />);
-    await click(screen.getByRole("button", { name: /^spin$/i }));
-
-    // pick the Mild flaw so there are no wild tokens — exactly 1 team + 1 era
-    const { FLAWS } = await import("@/data/flaws");
-    const { drawFlaws } = await import("@/lib/shop");
-    const offered = drawFlaws(SEED);
-    const mildAt = offered.findIndex((i) => FLAWS[i].severity === "Mild");
-    const cards = screen.getAllByRole("button", { pressed: false });
-    await click(cards[mildAt >= 0 ? mildAt : 0]);
-    await click(screen.getByRole("button", { name: /take flaw & build/i }));
+    render(<StealFlow mode="classic" fixedSeed={SEED} />);
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
     const before = BUCKETS[bucketIndexAt(SEED, 0, 0, 0)];
@@ -189,17 +219,64 @@ describe("re-spins", () => {
     await click(screen.getByRole("button", { name: /team re-spin/i }));
     expect(screen.getAllByText(afterTeam.label).length).toBeGreaterThan(0);
 
-    if (mildAt >= 0) {
-      // the team token is gone and no wild tokens exist to cover another
-      expect(screen.getByRole("button", { name: /team re-spin/i })).toHaveProperty("disabled", true);
-      // the era token is untouched and still lands inside the same franchise
-      const eraButton = screen.getByRole("button", { name: /era re-spin/i });
-      expect(eraButton).toHaveProperty("disabled", false);
-      await click(eraButton);
-      const afterEra = BUCKETS[bucketIndexAt(SEED, 0, 1, 1)];
-      expect(afterEra.franchise).toBe(afterTeam.franchise);
-      expect(afterEra.id).not.toBe(afterTeam.id);
-      expect(screen.getAllByText(afterEra.label).length).toBeGreaterThan(0);
+    // the team token is gone — v4 has no wild tokens, whatever the mode
+    expect(screen.getByRole("button", { name: /team re-spin/i })).toHaveProperty("disabled", true);
+    const eraButton = screen.getByRole("button", { name: /era re-spin/i });
+    expect(eraButton).toHaveProperty("disabled", false);
+    await click(eraButton);
+    const afterEra = BUCKETS[bucketIndexAt(SEED, 0, 1, 1)];
+    expect(afterEra.franchise).toBe(afterTeam.franchise);
+    expect(afterEra.id).not.toBe(afterTeam.id);
+    expect(screen.getAllByText(afterEra.label).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /era re-spin/i })).toHaveProperty("disabled", true);
+  });
+});
+
+describe("Head to Head", () => {
+  it("replaces the verdict with the comparison screen and names a winner", async () => {
+    stubMatchMedia(true);
+    // challenger: worst-available reads on the same wheel — beatable on purpose
+    const taken = new Set<string>();
+    const steals: Array<[number, number]> = [];
+    for (let round = 0; round < ROUNDS; round++) {
+      const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
+      const bucket = BUCKETS[bucketIdx];
+      const worst = bucket.players
+        .map((player, index) => ({ player, index }))
+        .filter(({ player }) => !taken.has(player.person))
+        .sort((a, b) => a.player.r[round] - b.player.r[round])[0];
+      taken.add(worst.player.person);
+      steals.push([bucketIdx, worst.index]);
     }
+    const challenger = simulateSteals({
+      v: 4, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      steals, attempt: 0, daily: 0, knowledge: false,
+    })!;
+
+    render(<StealFlow mode="classic" fixedSeed={SEED} challenge={challenger} />);
+
+    const mine = new Set<string>();
+    for (let round = 0; round < ROUNDS; round++) {
+      await click(screen.getByRole("button", { name: /^spin$/i }));
+      const bucketIdx = bucketIndexAt(SEED, round, 0, 0);
+      const bucket = BUCKETS[bucketIdx];
+      const best = bucket.players
+        .map((player, index) => ({ player, index }))
+        .filter(({ player }) => !mine.has(player.person))
+        .sort((a, b) => b.player.r[round] - a.player.r[round])[0];
+      mine.add(best.player.person);
+      await click(
+        screen.getByRole("button", {
+          name: new RegExp(`Steal ${ATTR_LABELS[ATTRS[round]]} from ${best.player.name}`, "i"),
+        })
+      );
+    }
+    await waitSim();
+
+    // side-by-side comparison, winner banner, rematch button
+    expect(screen.getByText("YOU")).toBeTruthy();
+    expect(screen.getByText("CHALLENGER")).toBeTruthy();
+    expect(screen.getByText(/YOU WIN/)).toBeTruthy();
+    expect(screen.getByText(/rematch: same wheel/i)).toBeTruthy();
   });
 });

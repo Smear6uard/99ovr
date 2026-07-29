@@ -5,6 +5,61 @@ import { Wordmark } from "@/components/Wordmark";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
+function ModeCard({
+  href,
+  kicker,
+  kickerAccent,
+  title,
+  blurb,
+  primary = false,
+}: {
+  href: string;
+  kicker: string;
+  kickerAccent?: string;
+  title: string;
+  blurb: string;
+  primary?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group block rounded-xl border px-5 py-4 transition-colors ${
+        primary
+          ? "border-gold/45 bg-panel shadow-[0_0_34px_-12px_rgba(242,185,75,0.5)] hover:border-gold"
+          : "border-line bg-panel2 hover:border-gold/60"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span
+          className={`text-[10px] font-bold uppercase tracking-[0.22em] ${primary ? "text-gold/90" : "text-dim"}`}
+        >
+          {kicker}
+          {kickerAccent ? (
+            <>
+              {" "}
+              &middot; <span className="text-loss/80">{kickerAccent}</span>
+            </>
+          ) : null}
+        </span>
+        <span
+          className={`font-display text-lg leading-none transition-all ${
+            primary ? "text-gold group-hover:translate-x-0.5" : "text-dim group-hover:text-gold"
+          }`}
+          aria-hidden
+        >
+          &rarr;
+        </span>
+      </div>
+      <h2
+        className={`mt-2.5 font-display uppercase leading-none ${primary ? "text-4xl text-gold" : "text-3xl text-paper"}`}
+      >
+        {title}
+      </h2>
+      <p className="mt-2 text-[13px] leading-snug text-dim">{blurb}</p>
+    </Link>
+  );
+}
+
 export default function Home() {
   return (
     <div className="pb-4">
@@ -41,85 +96,42 @@ export default function Home() {
             style={{ animationDelay: "120ms" }}
           >
             Six spins. Six real rosters. Steal one skill from each.{" "}
-            <span className="font-semibold text-paper">No prices — just what you actually know.</span>
+            <span className="font-semibold text-paper">Then ten bosses find out what you built.</span>
           </p>
         </div>
       </section>
 
-      {/* ---------- MODE CARDS ---------- */}
+      {/* ---------- MODE CARDS: DAILY · CLASSIC · BUDGET · HEAD TO HEAD ---------- */}
       <section
         className="fade-up mt-7 flex flex-col gap-3"
         style={{ animationDelay: "180ms" }}
         aria-label="Game modes"
       >
-        {/* PLAY — primary */}
-        <Link
-          href="/play"
-          className="group block rounded-xl border border-gold/45 bg-panel px-5 py-4 shadow-[0_0_34px_-12px_rgba(242,185,75,0.5)] transition-colors hover:border-gold"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-gold/90">
-              Play &middot; Six Steals
-            </span>
-            <span
-              className="font-display text-lg leading-none text-gold transition-transform group-hover:translate-x-0.5"
-              aria-hidden
-            >
-              &rarr;
-            </span>
-          </div>
-          <h2 className="mt-2.5 font-display text-4xl uppercase leading-none text-gold">Play</h2>
-          <p className="mt-2 text-[13px] leading-snug text-dim">
-            Spin for a real team-era. Read the roster. Steal the skill nobody else spots.
-          </p>
-        </Link>
-
-        {/* DAILY — live island */}
         <DailyCard />
 
-        {/* BALL KNOWLEDGE — hard mode (stats off) */}
-        <Link
-          href="/play?mode=knowledge"
-          className="group block rounded-xl border border-line bg-panel2 px-5 py-4 transition-colors hover:border-gold/60"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-dim">
-              Ball Knowledge &middot; <span className="text-loss/80">No Stats</span>
-            </span>
-            <span
-              className="font-display text-lg leading-none text-dim transition-colors group-hover:text-gold"
-              aria-hidden
-            >
-              &rarr;
-            </span>
-          </div>
-          <h2 className="mt-2.5 font-display text-3xl uppercase leading-none text-paper">Ball Knowledge</h2>
-          <p className="mt-2 text-[13px] leading-snug text-dim">
-            Box scores hidden. Just names on a roster. Prove you know ball.
-          </p>
-        </Link>
+        <ModeCard
+          href="/play"
+          kicker="Classic"
+          title="Classic"
+          blurb="The pure knowledge test. Pick your target — best player or a positional crown — and read six rosters."
+          primary
+        />
 
-        {/* BUDGET BALL — the original, now secondary */}
-        <Link
+        <ModeCard
           href="/budget"
-          className="group block rounded-xl border border-line bg-panel2 px-5 py-4 transition-colors hover:border-gold/60"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-dim">
-              Budget Ball &middot; <span className="text-gold/70">The Original</span>
-            </span>
-            <span
-              className="font-display text-lg leading-none text-dim transition-colors group-hover:text-gold"
-              aria-hidden
-            >
-              &rarr;
-            </span>
-          </div>
-          <h2 className="mt-2.5 font-display text-3xl uppercase leading-none text-paper">Budget Ball</h2>
-          <p className="mt-2 text-[13px] leading-snug text-dim">
-            The $20 challenge. Priced legends, eight slots, one flaw that pays you back.
-          </p>
-        </Link>
+          kicker="Budget"
+          kickerAccent="$20 · Weakness Wheel"
+          title="Budget"
+          blurb="Every skill has a price and you have $20. Halfway in, the weakness wheel pays you to take a flaw."
+        />
+
+        <ModeCard
+          href="/h2h"
+          kicker="Head to Head"
+          kickerAccent="Winner takes the roast"
+          title="Head to Head"
+          blurb="Mint a challenge from any Classic run. A friend plays your exact spins — side-by-side verdict decides it."
+        />
       </section>
 
       {/* ---------- HOW IT WORKS ---------- */}

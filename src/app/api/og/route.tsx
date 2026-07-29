@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { decodeAny } from "@/lib/encode";
 import { simulate } from "@/lib/sim";
 import { simulateSteals } from "@/lib/steal";
-import { OgHero, OgLandscape, OgStealLandscape } from "@/components/og/cards";
+import { OgH2H, OgHero, OgLandscape, OgStealLandscape, type HeroVariant } from "@/components/og/cards";
 
 export const runtime = "edge";
 
@@ -33,16 +33,20 @@ export async function GET(req: Request) {
     interBoldExtData,
   ]);
 
+  const variant = searchParams.get("v");
   const decoded = code ? decodeAny(code) : null;
   const steal = decoded?.kind === "steal" ? simulateSteals(decoded.build) : null;
   const budget = decoded?.kind === "budget" ? simulate(decoded.build) : null;
-  const card = steal ? (
-    <OgStealLandscape result={steal} />
-  ) : budget ? (
-    <OgLandscape result={budget} />
-  ) : (
-    <OgHero />
-  );
+  const card =
+    steal && variant === "h2h" ? (
+      <OgH2H result={steal} />
+    ) : steal ? (
+      <OgStealLandscape result={steal} />
+    ) : budget ? (
+      <OgLandscape result={budget} />
+    ) : (
+      <OgHero variant={(variant as HeroVariant) ?? "default"} />
+    );
 
   return new ImageResponse(card, {
     width: 1200,

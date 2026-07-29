@@ -10,8 +10,12 @@ export type DailyRecord = {
   archetypeName: string;
   fellAt: number | null;
   block: string;
-  /** percentile v1.1 — set only when the rank endpoint answered */
-  topPct?: number;
+  /** leaderboard — set only when the submission went through */
+  initials?: string;
+  rank?: number;
+  total?: number;
+  /** the KV sorted-set member, kept so "your rank" survives a reload */
+  member?: string;
 };
 
 export type DailyState = {
@@ -72,15 +76,32 @@ export function recordOfficialDaily(rec: DailyRecord): DailyState {
   return next;
 }
 
-/** Attaches a late-arriving percentile to today's stored official run. */
-export function attachDailyPercentile(date: string, topPct: number, block: string): DailyState {
+/** Attaches a late-arriving leaderboard rank to today's stored official run. */
+export function attachDailyRank(
+  date: string,
+  lb: { initials: string; rank: number; total: number; member?: string },
+  block: string
+): DailyState {
   const state = getDailyState();
   if (state.last?.date === date) {
-    state.last.topPct = topPct;
+    state.last.initials = lb.initials;
+    state.last.rank = lb.rank;
+    state.last.total = lb.total;
+    state.last.member = lb.member;
     state.last.block = block;
     write(DAILY_KEY, state);
   }
   return state;
+}
+
+const INITIALS_KEY = "99ovr:initials:v1";
+
+export function getSavedInitials(): string | null {
+  return read<string>(INITIALS_KEY);
+}
+
+export function saveInitials(initials: string): void {
+  write(INITIALS_KEY, initials);
 }
 
 export function getBestBuild(): BestBuild | null {

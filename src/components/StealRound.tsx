@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { EraCard, TeamWheel } from "@/components/TeamWheel";
 import { RosterCard } from "@/components/RosterCard";
 import { usePrefersReducedMotion } from "@/lib/hooks";
+import { buzz, playSfx } from "@/lib/sfx";
 import { BUCKETS } from "@/data/eras";
 import { ROUNDS, bucketIndexAt, canRespin, respinsLeft, type SpinsUsed, type Tokens } from "@/lib/wheel";
 import { ATTRS, ATTR_LABELS, type AttrId } from "@/lib/types";
@@ -54,6 +55,7 @@ export function StealRound({
   usedTotal,
   knowledge,
   stolen,
+  budget,
   onRespin,
   onSteal,
 }: {
@@ -66,6 +68,8 @@ export function StealRound({
   usedTotal: SpinsUsed;
   knowledge: boolean;
   stolen: Set<string>;
+  /** Budget mode wallet, or null everywhere else */
+  budget?: { spent: number; refund: number; round: number } | null;
   onRespin: (kind: "team" | "era") => void;
   onSteal: (bucketIdx: number, playerIdx: number) => void;
 }) {
@@ -79,14 +83,23 @@ export function StealRound({
   const bucketIdx = bucketIndexAt(seed, round, spins.team, spins.era);
   const bucket = BUCKETS[bucketIdx];
 
+  const land = () => {
+    setReel("landed");
+    // jackpot flash for the all-timers, comic womp for the wrecks
+    playSfx(bucket.vibe === "iconic" ? "jackpot" : bucket.vibe === "rough" ? "womp" : "land");
+    buzz(bucket.vibe === "iconic" ? [24, 40, 24, 40, 60] : [18, 30, 40]);
+  };
+
   const start = () => {
     if (timer.current) clearTimeout(timer.current);
     if (reduced) {
       setReel("landed");
       return;
     }
+    playSfx("spin");
+    buzz(35);
     setReel("spinning");
-    timer.current = setTimeout(() => setReel("landed"), SPIN_MS);
+    timer.current = setTimeout(land, SPIN_MS);
   };
 
   // a re-spin re-arms the reel without a second tap — the token is already gone
@@ -119,8 +132,13 @@ export function StealRound({
       </div>
 
       {reel === "landed" ? (
-        <div className="mt-4 space-y-3">
+        <div className={`mt-4 space-y-3 ${!reduced && bucket.vibe === "iconic" ? "jackpot-shake" : ""}`}>
           <EraCard bucket={bucket} animate={!reduced} />
+          {!reduced && bucket.vibe === "rough" ? (
+            <p aria-hidden className="womp-in text-center font-display text-xl uppercase tracking-[0.2em] text-loss/80">
+              womp womp
+            </p>
+          ) : null}
 
           <div className="flex gap-2">
             <RespinButton
@@ -144,6 +162,7 @@ export function StealRound({
             attr={attr}
             knowledge={knowledge}
             stolen={stolen}
+            budget={budget}
             onSteal={(playerIdx) => onSteal(bucketIdx, playerIdx)}
           />
         </div>
@@ -160,7 +179,7 @@ export function StealRound({
               type="button"
               onClick={start}
               disabled={reel === "spinning"}
-              className={`w-full rounded-xl py-4 font-display text-3xl uppercase tracking-[0.1em] text-ink shadow-[0_10px_30px_rgba(242,185,75,0.32)] transition-transform active:scale-[0.98] ${
+              className={`spin-lever w-full rounded-xl border-b-4 border-[#a97b22] py-4 font-display text-3xl uppercase tracking-[0.1em] text-ink shadow-[0_10px_30px_rgba(242,185,75,0.32)] transition-transform active:translate-y-[3px] active:border-b-0 ${
                 reel === "spinning" ? "pulse-soft cursor-default bg-gold/70" : "bg-gold"
               }`}
             >

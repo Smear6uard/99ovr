@@ -1,7 +1,7 @@
 /**
  * Minimal Vercel KV / Upstash Redis REST client (server-only).
  * No SDK dependency; a missing binding just means kvAvailable() === false
- * and the percentile feature no-ops.
+ * and the daily leaderboard no-ops.
  */
 
 function creds(): { url: string; token: string } | null {
