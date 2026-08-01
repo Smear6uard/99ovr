@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { POOL, indexOfEntry } from "@/data/pool";
 import { FLAWS } from "@/data/flaws";
-import { BUDGET, curve, deriveBuild, simSeedFor, simulate, validateBuild } from "@/lib/sim";
+import { GAUNTLET } from "@/data/gauntlet";
+import { BUDGET, curve, deriveBuild, runGauntlet, simSeedFor, simulate, validateBuild } from "@/lib/sim";
 import { canPick, drawShop } from "@/lib/shop";
 import { POSITIONS, SLOTS, type BuildCode, type SlotId } from "@/lib/types";
 import { tierFor } from "@/lib/tiers";
@@ -89,6 +90,20 @@ describe("determinism and replay", () => {
       const next = drawShop(123456, [slot])[slot];
       expect(next).toHaveLength(5);
       next.forEach((pick, tier) => expect(pick).not.toBe(initial[slot][tier]));
+    }
+  });
+});
+
+describe("gauntlet calibration", () => {
+  it("does not let a 94-power build randomly lose to the early-rung opponents", () => {
+    for (let seed = 0; seed < 1_000; seed++) {
+      const result = runGauntlet(
+        { playerPower: 94, fatigueMod: 0, durability: 75 },
+        null,
+        seed,
+        GAUNTLET
+      );
+      expect(result.fellAt === null || result.fellAt >= 7, `seed ${seed}`).toBe(true);
     }
   });
 });

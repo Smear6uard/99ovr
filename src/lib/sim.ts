@@ -214,6 +214,9 @@ const pickAt = <T,>(arr: readonly T[], roll: number): T => arr[Math.min(arr.leng
 /** Everything the gauntlet needs from a build — shared by v2 Derived and v3 StealDerived. */
 export type GauntletInput = { playerPower: number; fatigueMod: number; durability: number };
 
+/** Outside this gap, the matchup is decided by build quality rather than a lottery upset. */
+export const GAUNTLET_UPSET_WINDOW = 12;
+
 /**
  * `flatInjuryRisk` skips the durability scaling on injury flaws — true for v1
  * (no durability slot yet) and for v3 (durability removed; the flaw carries it).
@@ -258,9 +261,14 @@ export function runGauntlet(derived: GauntletInput, flaw: Flaw | null, simSeed: 
     }
 
     const fatigue = opp.rung >= 6 ? derived.fatigueMod * (opp.rung - 5) : 0;
-    const diff = derived.playerPower - opp.power + tick.mod + fatigue + variance;
+    const matchupDiff = derived.playerPower - opp.power + tick.mod + fatigue;
+    const diff = matchupDiff + variance;
     const p = 1 / (1 + Math.exp(-diff / 6));
-    const win = winRoll < p;
+    const win = matchupDiff >= GAUNTLET_UPSET_WINDOW
+      ? true
+      : matchupDiff <= -GAUNTLET_UPSET_WINDOW
+        ? false
+        : winRoll < p;
 
     const effDiff = Math.abs(diff);
     const loserScore = clamp(Math.round(10 - effDiff * 0.7 - scoreNoise * 2), 0, 10);

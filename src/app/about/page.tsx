@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GAUNTLET } from "@/data/gauntlet";
-import { BUCKETS, FRANCHISES } from "@/data/eras";
+import { DECADE_BUCKETS, DECADE_FRANCHISES } from "@/data/eras/decades";
 import { RATING_TIERS } from "@/config/ratingTiers";
 import { STEAL_BUDGET } from "@/lib/steal";
 import { ATTR_LABELS, ATTRS } from "@/lib/types";
@@ -9,7 +9,7 @@ import { ATTR_LABELS, ATTRS } from "@/lib/types";
 export const metadata: Metadata = {
   title: "How it works",
   description:
-    "The rules of 99OVR: spin for a real team-era, steal one player's skill six times, then face ten boss legends — in Daily, Classic, Budget, or Head to Head.",
+    "The rules of 99OVR: spin for a real franchise-decade, steal one player's skill six times, then face ten boss legends — in Daily, Classic, Budget, or Head to Head.",
   alternates: { canonical: "/about" },
 };
 
@@ -40,12 +40,12 @@ const FAQ = [
   },
   {
     q: "What decides who wins a Round?",
-    a: "Your offense, defense, playmaking, a seeded variance roll — and in Budget, your flaw. Athleticism fights late-round fatigue. First to 11; first loss ends the run.",
+    a: "Your offense, defense, playmaking, and — in close matchups — a seeded variance roll. Large power gaps are deterministic, so an elite build cannot randomly lose to an early boss. In Budget, your flaw also matters. First to 11; first loss ends the run.",
   },
 ];
 
 export default function AboutPage() {
-  const rough = BUCKETS.filter((bucket) => bucket.vibe === "rough").length;
+  const rough = DECADE_BUCKETS.filter((bucket) => bucket.vibe === "rough").length;
 
   return (
     <article className="prose-invert pt-2 text-[14px] leading-relaxed text-paper">
@@ -62,18 +62,20 @@ export default function AboutPage() {
             Six rounds, one per attribute: {ATTRS.map((attr) => ATTR_LABELS[attr]).join(", ")}.
           </li>
           <li>
-            Each round the slot machine lands on a real franchise and decade &mdash; {BUCKETS.length} team-eras
-            across {FRANCHISES.length} franchises, and {rough} are genuinely rough. The groans are part of it.
+            Each round the slot machine lands on a real franchise and decade &mdash; {DECADE_BUCKETS.length}{" "}
+            all-decade rosters across {DECADE_FRANCHISES.length} franchises, and {rough} are genuinely rough. The
+            groans are part of it.
           </li>
           <li>
-            The era roster appears &mdash; real players, era-flavored box stats.{" "}
+            The all-decade roster appears &mdash; every player who appeared for that franchise in the decade.{" "}
             <strong>Steal one player&rsquo;s skill</strong> for that attribute. Hidden per-attribute ratings grade
             every steal at the end.
           </li>
           <li>A player can be stolen from only once per run. No doubling up on one legend.</li>
           <li>
-            Skips: one <strong>team re-spin</strong> (a brand new team-era) and one <strong>era re-spin</strong>{" "}
-            (same franchise, different decade) per run. Spend them like they matter, because they do.
+            Skips: one <strong>team re-spin</strong> (same decade, different franchise) and one{" "}
+            <strong>decade re-spin</strong> (same franchise, different decade) per run. Each changes only its named
+            reel.
           </li>
           <li>Then beat 10 boss legends 1v1. Lose one Round and it&apos;s over.</li>
         </ul>

@@ -755,7 +755,7 @@ export function OgStealPortrait({ result }: { result: StealResult }) {
 export type HeroVariant = "default" | "daily" | "classic" | "budget" | "h2h";
 
 const HERO_COPY: Record<HeroVariant, { tagline: string; sub: string; prices: boolean }> = {
-  default: { tagline: "SPIN AN ERA. READ THE ROSTER. STEAL THE SKILL.", sub: "FOUR MODES · SIX STEALS · TEN BOSSES", prices: false },
+  default: { tagline: "SPIN A DECADE. READ THE ROSTER. STEAL THE SKILL.", sub: "FOUR MODES · SIX STEALS · TEN BOSSES", prices: false },
   daily: { tagline: "SAME WHEEL FOR EVERYONE ON EARTH.", sub: "DAILY · ONE OFFICIAL RUN · ARCADE LEADERBOARD", prices: false },
   classic: { tagline: "SIX SPINS. SIX ROSTERS. NO PRICES.", sub: "CLASSIC · BEST PLAYER OR A POSITIONAL CROWN", prices: false },
   budget: { tagline: `EVERY SKILL HAS A PRICE. YOU HAVE $${STEAL_BUDGET}.`, sub: "BUDGET · THE WEAKNESS WHEEL PAYS YOU BACK", prices: true },

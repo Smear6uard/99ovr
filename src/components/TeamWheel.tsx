@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { DECADE_BUCKETS } from "@/data/eras/decades";
 import { decadeTag } from "@/data/eras/authoring";
 import { POS_DECADES } from "@/data/positions";
-import { POSITION_LABELS, POSITIONS, type EraBucket, type Position } from "@/lib/types";
+import { POSITION_LABELS, type EraBucket, type Position } from "@/lib/types";
 
 const ROW = 44;
 const STRIP = 18;
@@ -125,7 +125,6 @@ function Marquee({ live }: { live: boolean }) {
   );
 }
 
-const POS_LABEL_ROWS = POSITIONS.map((p) => `${POSITION_LABELS[p]}S`);
 const DECADE_ROWS = POS_DECADES.map((d) => decadeTag(d));
 
 export function TeamWheel({
@@ -154,18 +153,20 @@ export function TeamWheel({
     [positional, round, bucket.team, bucket.decade]
   );
   const right = useMemo(
-    () =>
-      positional
-        ? cycleFillers(POS_LABEL_ROWS, round * 2, `${POSITION_LABELS[position].toUpperCase()}S`)
-        : cycleFillers(DECADE_ROWS, round * 11 + 4, decadeTag(bucket.decade)),
-    [positional, round, position, bucket.decade]
+    () => cycleFillers(DECADE_ROWS, round * 11 + 4, decadeTag(bucket.decade)),
+    [round, bucket.decade]
   );
   const live = spinning && !reduced;
 
   return (
     <div aria-hidden className="cabinet relative rounded-2xl px-3 pb-3 pt-2.5">
       <Marquee live={live} />
-      <div className="flex gap-2.5">
+      {positional ? (
+        <span className="mb-2 block text-center text-[9px] font-bold tracking-[0.2em] text-gold/90">
+          LOCKED TARGET · {POSITION_LABELS[position!]}
+        </span>
+      ) : null}
+      <div className={positional ? "mx-auto max-w-[180px]" : "flex gap-2.5"}>
         <Reel
           rows={left}
           spinning={live && mask.left}
@@ -175,15 +176,17 @@ export function TeamWheel({
           label={positional ? "DECADE" : "TEAM"}
           accent="#55b8c9"
         />
-        <Reel
-          rows={right}
-          spinning={live && mask.right}
-          settled={!spinning}
-          delay={260}
-          duration={1500}
-          label={positional ? "POSITION" : "ERA"}
-          accent="#f26bb8"
-        />
+        {!positional ? (
+          <Reel
+            rows={right}
+            spinning={live && mask.right}
+            settled={!spinning}
+            delay={260}
+            duration={1500}
+            label="DECADE"
+            accent="#f26bb8"
+          />
+        ) : null}
       </div>
       {/* cabinet corner screws */}
       <span aria-hidden className="screw" style={{ left: 7, top: 7 }} />

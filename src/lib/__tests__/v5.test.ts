@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BUCKETS, FRANCHISES } from "@/data/eras";
 import { DECADE_BUCKETS, DECADE_FRANCHISES } from "@/data/eras/decades";
+import { DECADE_ROSTER_SUPPLEMENTS } from "@/data/eras/decade-rosters.generated";
 import { FLAWS } from "@/data/flaws";
 import { POSITION_POOLS, POS_DECADES } from "@/data/positions";
 import { dailyNumberFor, dailySeed, dailyTargetFor, utcDateString } from "@/lib/daily";
@@ -26,7 +27,7 @@ import {
   stealBudgetFor,
   validateSteals,
 } from "@/lib/steal";
-import { DECADE_POOL, ROUNDS, bucketIndexAt } from "@/lib/wheel";
+import { DECADE_POOL, ROUNDS, bucketIndexAt, respinBucketIndex } from "@/lib/wheel";
 import { ATTRS, POSITIONS, type Position, type StealBuild } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -46,6 +47,7 @@ describe("decade pool", () => {
       const people = bucket.players.map((p) => p.person);
       expect(new Set(people).size, bucket.id).toBe(people.length);
       expect(bucket.players.length, bucket.id).toBeGreaterThanOrEqual(10);
+      expect(bucket.players.length, bucket.id).toBeLessThanOrEqual(256);
     }
   });
 
@@ -55,6 +57,30 @@ describe("decade pool", () => {
       const people = new Set(merged.players.map((p) => p.person));
       for (const player of era.players) expect(people.has(player.person), `${era.id}:${player.person}`).toBe(true);
     }
+  });
+
+  it("covers every historical player-person in each published franchise-decade", () => {
+    for (const [key, sourcePlayers] of Object.entries(DECADE_ROSTER_SUPPLEMENTS)) {
+      const [franchise, decadeText] = key.split(":");
+      const bucket = DECADE_BUCKETS.find(
+        (candidate) => candidate.franchise === franchise && candidate.decade === Number(decadeText)
+      );
+      expect(bucket, key).toBeTruthy();
+      const people = new Set(bucket!.players.map((player) => player.person));
+      for (const player of sourcePlayers) {
+        expect(people.has(player.person), `${key}:${player.name}`).toBe(true);
+      }
+    }
+  });
+
+  it("makes the 00s Nuggets an all-decade roster instead of the 2003 snapshot", () => {
+    const nuggets = DECADE_BUCKETS.find((bucket) => bucket.franchise === "nuggets" && bucket.decade === 2000)!;
+    const names = new Set(nuggets.players.map((player) => player.name));
+    for (const name of ["Carmelo Anthony", "Andre Miller", "Kenyon Martin", "Allen Iverson", "Chauncey Billups"]) {
+      expect(names.has(name), name).toBe(true);
+    }
+    expect(nuggets.players.length).toBeGreaterThan(50);
+    expect(nuggets.tag).toMatch(/every nuggets player/i);
   });
 
   it("keeps the $1 minimum contract on every decade roster", () => {
@@ -118,6 +144,25 @@ function v5Classic(seed: number): StealBuild {
 }
 
 describe("v5 classic", () => {
+  it("re-spins exactly one visible axis", () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      for (let round = 0; round < ROUNDS; round++) {
+        const initialIdx = bucketIndexAt(seed, round, 0, 0, DECADE_POOL);
+        const initial = DECADE_POOL.buckets[initialIdx];
+        const team = DECADE_POOL.buckets[respinBucketIndex(seed, round, initialIdx, "team", DECADE_POOL)];
+        expect(team.franchise).not.toBe(initial.franchise);
+        expect(team.decade).toBe(initial.decade);
+
+        const decadeIdx = respinBucketIndex(seed, round, initialIdx, "era", DECADE_POOL);
+        const decade = DECADE_POOL.buckets[decadeIdx];
+        if (decadeIdx !== initialIdx) {
+          expect(decade.franchise).toBe(initial.franchise);
+          expect(decade.decade).not.toBe(initial.decade);
+        }
+      }
+    }
+  });
+
   it("validates, simulates, and round-trips through the code", () => {
     const build = v5Classic(0xdecade);
     expect(validateSteals(build)).toBe(true);

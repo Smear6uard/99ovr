@@ -1,5 +1,6 @@
 import { BUCKETS } from "@/data/eras";
 import { decadeTag } from "@/data/eras/authoring";
+import { DECADE_ROSTER_SUPPLEMENTS } from "@/data/eras/decade-rosters.generated";
 import type { EraBucket, EraPlayer, EraVibe, Franchise } from "@/lib/types";
 
 /**
@@ -33,6 +34,30 @@ function mergeInto(target: EraBucket, era: EraBucket): void {
   }
 }
 
+/**
+ * A decade bucket is an all-decade franchise pool, not the single season that
+ * originally supplied its wheel slot. Supplements are append-only: the
+ * hand-authored snapshot stays at the front so existing v5 player indices do
+ * not move, while every other player who appeared for the franchise during
+ * that decade becomes available.
+ */
+function appendDecadeRoster(target: EraBucket): void {
+  const existing = new Set(target.players.map((player) => player.person));
+  for (const player of DECADE_ROSTER_SUPPLEMENTS[`${target.franchise}:${target.decade}`] ?? []) {
+    if (existing.has(player.person)) continue;
+    target.players.push({ ...player, id: `${target.id}:${player.person}` });
+    existing.add(player.person);
+  }
+  const topAttributeAverage = target.players
+    .map((player) => Math.max(...player.r))
+    .sort((a, b) => b - a)
+    .slice(0, 8)
+    .reduce((sum, rating, _index, top) => sum + rating / top.length, 0);
+  const fullRosterVibe: EraVibe = topAttributeAverage >= 90 ? "iconic" : topAttributeAverage < 85 ? "rough" : "solid";
+  if (VIBE_RANK[fullRosterVibe] > VIBE_RANK[target.vibe]) target.vibe = fullRosterVibe;
+  target.tag = `Every ${target.team} player from the ${decadeTag(target.decade)} — one all-decade roster.`;
+}
+
 export const DECADE_BUCKETS: EraBucket[] = (() => {
   const byKey = new Map<string, EraBucket>();
   const out: EraBucket[] = [];
@@ -58,6 +83,7 @@ export const DECADE_BUCKETS: EraBucket[] = (() => {
     byKey.set(key, bucket);
     out.push(bucket);
   }
+  for (const bucket of out) appendDecadeRoster(bucket);
   return out;
 })();
 

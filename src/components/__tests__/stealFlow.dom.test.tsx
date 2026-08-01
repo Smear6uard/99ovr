@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { decodeSteal, encodeSteal } from "@/lib/encode";
 import { canAffordSteal, priceIn, simulateSteals } from "@/lib/steal";
-import { DECADE_POOL, ROUNDS, bucketIndexAt } from "@/lib/wheel";
+import { DECADE_POOL, ROUNDS, bucketIndexAt, respinBucketIndex } from "@/lib/wheel";
 import { ATTR_LABELS, ATTRS, type StealBuild } from "@/lib/types";
 import { StealFlow } from "@/components/StealFlow";
 
@@ -209,28 +209,39 @@ describe("Ball Knowledge", () => {
 });
 
 describe("re-spins", () => {
-  it("gives exactly one team and one era re-spin, then disables both", async () => {
+  it("gives one team and one decade re-spin, and each changes only its own reel", async () => {
     stubMatchMedia(true);
     render(<StealFlow mode="classic" fixedSeed={SEED} />);
     await click(screen.getByRole("button", { name: /^spin$/i }));
 
     const before = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 0, 0, DECADE_POOL)];
-    const afterTeam = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 1, 0, DECADE_POOL)];
+    const afterTeamIdx = respinBucketIndex(SEED, 0, bucketIndexAt(SEED, 0, 0, 0, DECADE_POOL), "team", DECADE_POOL);
+    const afterTeam = DECADE_POOL.buckets[afterTeamIdx];
     expect(screen.getAllByText(before.label).length).toBeGreaterThan(0);
 
     await click(screen.getByRole("button", { name: /team re-spin/i }));
     expect(screen.getAllByText(afterTeam.label).length).toBeGreaterThan(0);
+    expect(afterTeam.decade).toBe(before.decade);
+    expect(afterTeam.franchise).not.toBe(before.franchise);
 
     // the team token is gone — v4 has no wild tokens, whatever the mode
     expect(screen.getByRole("button", { name: /team re-spin/i })).toHaveProperty("disabled", true);
-    const eraButton = screen.getByRole("button", { name: /era re-spin/i });
+    const eraButton = screen.getByRole("button", { name: /decade re-spin/i });
     expect(eraButton).toHaveProperty("disabled", false);
     await click(eraButton);
-    const afterEra = DECADE_POOL.buckets[bucketIndexAt(SEED, 0, 1, 1, DECADE_POOL)];
+    const afterEra = DECADE_POOL.buckets[respinBucketIndex(SEED, 0, afterTeamIdx, "era", DECADE_POOL)];
     expect(afterEra.franchise).toBe(afterTeam.franchise);
-    expect(afterEra.id).not.toBe(afterTeam.id);
+    expect(afterEra.decade).not.toBe(afterTeam.decade);
     expect(screen.getAllByText(afterEra.label).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /era re-spin/i })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: /decade re-spin/i })).toHaveProperty("disabled", true);
+  });
+
+  it("renders one decade reel for a fixed-position build", () => {
+    stubMatchMedia(true);
+    render(<StealFlow mode="classic" fixedSeed={SEED} target="SG" />);
+    expect(screen.getByText(/locked target · shooting guard/i)).toBeTruthy();
+    expect(screen.getAllByText(/^DECADE$/)).toHaveLength(1);
+    expect(screen.queryByText(/^POSITION$/)).toBeNull();
   });
 });
 

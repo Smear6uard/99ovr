@@ -7,7 +7,7 @@ import { usePrefersReducedMotion } from "@/lib/hooks";
 import { buzz, playSfx } from "@/lib/sfx";
 import { POS_DECADES } from "@/data/positions";
 import { MAX_POS_SPINS, POS_TOKENS, posBucketAt } from "@/lib/poswheel";
-import { DECADE_POOL, ROUNDS, bucketIndexAt, canRespin, eraCountAt, respinsLeft, type SpinsUsed, type Tokens } from "@/lib/wheel";
+import { DECADE_POOL, ROUNDS, bucketIndexAt, canRespin, eraCountForBucket, respinsLeft, type SpinsUsed, type Tokens } from "@/lib/wheel";
 import { ATTRS, ATTR_LABELS, type AttrId, type PositionMode } from "@/lib/types";
 
 type Reel = "idle" | "spinning" | "landed";
@@ -63,6 +63,7 @@ export function StealRound({
   knowledge,
   stolen,
   budget,
+  landing,
   onRespin,
   onSteal,
 }: {
@@ -78,6 +79,8 @@ export function StealRound({
   stolen: Set<string>;
   /** Budget mode wallet, or null everywhere else */
   budget?: { spent: number; refund: number; round: number } | null;
+  /** Current classic/daily/budget franchise-decade landing after one-axis re-spins. */
+  landing?: number | null;
   onRespin: (kind: "team" | "era") => void;
   onSteal: (bucketIdx: number, playerIdx: number) => void;
 }) {
@@ -90,7 +93,7 @@ export function StealRound({
 
   const positional = target !== "ALL";
   const attr: AttrId = ATTRS[round];
-  const bucketIdx = positional ? -1 : bucketIndexAt(seed, round, spins.team, spins.era, DECADE_POOL);
+  const bucketIdx = positional ? -1 : landing ?? bucketIndexAt(seed, round, 0, 0, DECADE_POOL);
   const bucket = positional ? posBucketAt(seed, round, spins.team, target) : DECADE_POOL.buckets[bucketIdx];
   const previousBucket = useRef(bucket);
 
@@ -136,7 +139,7 @@ export function StealRound({
 
   const teamLeft = respinsLeft("team", tokens, usedTotal);
   const eraLeft = respinsLeft("era", tokens, usedTotal);
-  const eraCount = positional ? 0 : eraCountAt(seed, round, spins.team, DECADE_POOL);
+  const eraCount = positional ? 0 : eraCountForBucket(bucketIdx, DECADE_POOL);
   const posLeft = POS_TOKENS - usedTotal.team - usedTotal.era;
 
   return (
@@ -146,7 +149,7 @@ export function StealRound({
           ROUND {round + 1} / {ROUNDS} · {ATTR_LABELS[attr].toUpperCase()}
         </span>
         <h1 className="mt-1 font-display text-[38px] uppercase leading-none text-paper">
-          {reel === "landed" ? "Steal one" : reel === "spinning" ? "Spinning…" : positional ? "Spin the decade" : "Spin the era"}
+          {reel === "landed" ? "Steal one" : reel === "spinning" ? "Spinning…" : positional ? "Spin the decade" : "Spin team + decade"}
         </h1>
       </div>
 
@@ -171,17 +174,17 @@ export function StealRound({
             <div className="flex gap-2">
               <RespinButton
                 label="TEAM RE-SPIN"
-                hint="ANY TEAM"
+                hint="SAME DECADE"
                 left={teamLeft}
                 enabled={canRespin("team", tokens, usedTotal)}
                 onClick={() => onRespin("team")}
               />
               <RespinButton
-                label="ERA RE-SPIN"
-                hint={`ANOTHER ${bucket.team} ERA`}
+                label="DECADE RE-SPIN"
+                hint={`SAME ${bucket.team} TEAM`}
                 left={eraLeft}
                 enabled={canRespin("era", tokens, usedTotal) && eraCount > 1}
-                disabledHint={eraCount > 1 ? "SPENT" : `ONLY ${bucket.team} ERA`}
+                disabledHint={eraCount > 1 ? "SPENT" : `ONLY ONE ${bucket.team} DECADE`}
                 onClick={() => onRespin("era")}
               />
             </div>
@@ -229,7 +232,7 @@ export function StealRound({
                 ? "Wherever it lands, that roster is your only shot at this skill."
                 : positional
                   ? `One decade of ${target}s. One ${ATTR_LABELS[attr].toLowerCase()}. Twelve names.`
-                  : `One team-era. One ${ATTR_LABELS[attr].toLowerCase()}. Whoever's on it.`}
+                  : `One franchise-decade. One ${ATTR_LABELS[attr].toLowerCase()}. Every player from it.`}
             </p>
           </div>
         </>

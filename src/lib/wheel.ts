@@ -64,9 +64,44 @@ export function bucketAt(seed: number, round: number, t: number, e: number, pool
   return pool.buckets[bucketIndexAt(seed, round, t, e, pool)];
 }
 
+/**
+ * Re-spin one visible axis of a landed franchise-decade bucket. Team re-spins
+ * keep the decade; decade re-spins keep the franchise. The old count-based
+ * wheel remains above for v3/v4 replay compatibility.
+ */
+export function respinBucketIndex(
+  seed: number,
+  round: number,
+  currentBucketIdx: number,
+  kind: "team" | "era",
+  pool: WheelPool = DECADE_POOL
+): number {
+  const current = pool.buckets[currentBucketIdx];
+  if (!current) return currentBucketIdx;
+  const candidates = pool.buckets
+    .map((bucket, index) => ({ bucket, index }))
+    .filter(({ bucket }) =>
+      kind === "team"
+        ? bucket.decade === current.decade && bucket.franchise !== current.franchise
+        : bucket.franchise === current.franchise && bucket.decade !== current.decade
+    );
+  if (candidates.length === 0) return currentBucketIdx;
+  const ordered = shuffle(
+    mulberry32(fnv1a(`respin:${pool.id}:${seed}:${round}:${kind}:${current.id}`)),
+    candidates
+  );
+  return ordered[0].index;
+}
+
 /** How many distinct eras the current franchise has — 1 means the era token is dead here. */
 export function eraCountAt(seed: number, round: number, t: number, pool: WheelPool = ERA_POOL): number {
   return pool.franchises[franchiseAt(seed, round, t, pool)].eras.length;
+}
+
+/** Number of decade choices for the franchise on an already-resolved landing. */
+export function eraCountForBucket(bucketIdx: number, pool: WheelPool = DECADE_POOL): number {
+  const bucket = pool.buckets[bucketIdx];
+  return pool.franchises.find((franchise) => franchise.id === bucket?.franchise)?.eras.length ?? 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -128,6 +163,30 @@ export function respinsLeft(kind: "team" | "era", tokens: Tokens, used: SpinsUse
  * or null if the bucket was unreachable. Server-side anti-cheat starts here.
  */
 export function minSpinsFor(seed: number, round: number, bucketIdx: number, pool: WheelPool = ERA_POOL): SpinsUsed | null {
+  if (pool.id === DECADE_POOL.id) {
+    const initial = bucketIndexAt(seed, round, 0, 0, pool);
+    const queue: Array<{ bucketIdx: number; used: SpinsUsed }> = [
+      { bucketIdx: initial, used: { team: 0, era: 0 } },
+    ];
+    const seen = new Set<string>();
+    while (queue.length) {
+      const state = queue.shift()!;
+      const key = `${state.bucketIdx}:${state.used.team}:${state.used.era}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (state.bucketIdx === bucketIdx) return state.used;
+      for (const kind of ["team", "era"] as const) {
+        const cap = kind === "team" ? MAX_TEAM_SPINS : MAX_ERA_SPINS;
+        if (state.used[kind] >= cap) continue;
+        const next = respinBucketIndex(seed, round, state.bucketIdx, kind, pool);
+        if (next === state.bucketIdx) continue;
+        queue.push({ bucketIdx: next, used: { ...state.used, [kind]: state.used[kind] + 1 } });
+      }
+    }
+
+    // v5 codes published before one-axis re-spins used the count-based wheel.
+    // Continue accepting those exact landings so old share links still replay.
+  }
   for (let total = 0; total <= MAX_TEAM_SPINS + MAX_ERA_SPINS; total++) {
     for (let team = 0; team <= Math.min(total, MAX_TEAM_SPINS); team++) {
       const era = total - team;
@@ -145,6 +204,28 @@ export function spinsAffordable(used: SpinsUsed, tokens: Tokens): boolean {
 
 /** Every bucket index a player could legitimately have landed on this round. */
 export function reachableBuckets(seed: number, round: number, tokens: Tokens, pool: WheelPool = ERA_POOL): number[] {
+  if (pool.id === DECADE_POOL.id) {
+    const initial = bucketIndexAt(seed, round, 0, 0, pool);
+    const queue: Array<{ bucketIdx: number; used: SpinsUsed }> = [
+      { bucketIdx: initial, used: { team: 0, era: 0 } },
+    ];
+    const states = new Set<string>();
+    const out = new Set<number>();
+    while (queue.length) {
+      const state = queue.shift()!;
+      const key = `${state.bucketIdx}:${state.used.team}:${state.used.era}`;
+      if (states.has(key) || !spinsAffordable(state.used, tokens)) continue;
+      states.add(key);
+      out.add(state.bucketIdx);
+      for (const kind of ["team", "era"] as const) {
+        if (!canRespin(kind, tokens, state.used)) continue;
+        const next = respinBucketIndex(seed, round, state.bucketIdx, kind, pool);
+        if (next === state.bucketIdx) continue;
+        queue.push({ bucketIdx: next, used: { ...state.used, [kind]: state.used[kind] + 1 } });
+      }
+    }
+    return [...out];
+  }
   const maxTeam = Math.min(MAX_TEAM_SPINS, tokens.team + tokens.wild);
   const maxEra = Math.min(MAX_ERA_SPINS, tokens.era + tokens.wild);
   const out = new Set<number>();

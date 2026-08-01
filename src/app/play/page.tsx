@@ -5,7 +5,7 @@ import { ClassicGame } from "@/components/ClassicGame";
 export const metadata: Metadata = {
   title: "Classic",
   description:
-    "Spin for a real team-era, read the roster, and steal one player's skill. Six rounds, no prices, ten bosses.",
+    "Spin for a real franchise-decade, read the all-decade roster, and steal one player's skill. Six rounds, no prices, ten bosses.",
   alternates: { canonical: "/play" },
   openGraph: { images: ["/api/og?v=classic"] },
   twitter: { card: "summary_large_image", images: ["/api/og?v=classic"] },

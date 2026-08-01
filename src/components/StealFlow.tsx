@@ -15,7 +15,7 @@ import { POS_TOKENS, posBucketFor } from "@/lib/poswheel";
 import { STEAL_BUDGET, WHEEL_AFTER, canAffordSteal, priceIn, simulateSteals } from "@/lib/steal";
 import { maybeRecordBest } from "@/lib/storage";
 import { TIER_HEX, tierFor } from "@/lib/tiers";
-import { ROUNDS, V4_TOKENS, canRespin, totalRespinsLeft, type SpinsUsed } from "@/lib/wheel";
+import { DECADE_POOL, ROUNDS, V4_TOKENS, bucketIndexAt, canRespin, respinBucketIndex, totalRespinsLeft, type SpinsUsed } from "@/lib/wheel";
 import { ATTR_LABELS, type PositionMode, type Steal, type StealBuild, type StealMode, type StealResult } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
 import { FlawSpin } from "@/components/FlawSpin";
@@ -124,6 +124,8 @@ export function StealFlow({
   const [round, setRound] = useState(0);
   /** re-spins spent per round, index-aligned with ATTRS */
   const [spins, setSpins] = useState<SpinsUsed[]>(() => Array.from({ length: ROUNDS }, () => ({ ...ZERO })));
+  /** Current one-axis landing per non-positional round; null means the base spin. */
+  const [landings, setLandings] = useState<Array<number | null>>(() => Array.from({ length: ROUNDS }, () => null));
   const [picks, setPicks] = useState<Array<[number, number]>>([]);
   const [attempt, setAttempt] = useState(startAttempt);
   const [result, setResult] = useState<StealResult | null>(null);
@@ -220,9 +222,15 @@ export function StealFlow({
       } else if (!canRespin(kind, V4_TOKENS, usedTotal)) {
         return;
       }
+      if (!positional) {
+        const current = landings[round] ?? bucketIndexAt(seed ?? 0, round, 0, 0, DECADE_POOL);
+        const next = respinBucketIndex(seed ?? 0, round, current, kind, DECADE_POOL);
+        if (next === current) return;
+        setLandings((prev) => prev.map((landing, i) => (i === round ? next : landing)));
+      }
       setSpins((prev) => prev.map((s, i) => (i === round ? { ...s, [kind]: s[kind] + 1 } : s)));
     },
-    [positional, usedTotal, round]
+    [positional, usedTotal, landings, round, seed]
   );
 
   const handleSteal = useCallback(
@@ -256,6 +264,7 @@ export function StealFlow({
     setPicks([]);
     setRound(0);
     setSpins(Array.from({ length: ROUNDS }, () => ({ ...ZERO })));
+    setLandings(Array.from({ length: ROUNDS }, () => null));
     setFlawIdx(null);
     setResult(null);
     setAttempt((a) => (mode === "daily" ? a + 1 : 0));
@@ -320,6 +329,7 @@ export function StealFlow({
             knowledge={knowledge}
             stolen={stolen}
             budget={budgetMode ? { spent, refund, round } : null}
+            landing={landings[round]}
             onRespin={handleRespin}
             onSteal={handleSteal}
           />
