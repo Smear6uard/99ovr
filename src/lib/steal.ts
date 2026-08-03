@@ -1,10 +1,11 @@
 import { FLAWS } from "@/data/flaws";
 import { GAUNTLET, POSITION_GAUNTLETS } from "@/data/gauntlet";
 import { ARCHETYPES } from "@/data/archetypes";
+import { budgetRefundForSeverity } from "@/config/flawEconomy";
 import { POS_DECADES } from "@/data/positions";
-import { POS_TOKENS, minSpinsForPosDecade, posBucketFor } from "@/lib/poswheel";
+import { minSpinsForPosDecade, posBucketFor, posTokensFor } from "@/lib/poswheel";
 import { fnv1a, mulberry32 } from "@/lib/rng";
-import { bandFor, curve, pickRoast, runGauntlet } from "@/lib/sim";
+import { bandFor, pickRoast, runGauntlet } from "@/lib/sim";
 import { gradeFor, gradeScore, verdictFor } from "@/lib/grade";
 import { ROUNDS, V4_TOKENS, minSpinsFor, poolFor, spinsAffordable, tokensFor } from "@/lib/wheel";
 import {
@@ -46,15 +47,15 @@ type StealSynergy = {
 const decadesOf = (steals: Steal[]) => steals.map((s) => s.bucket.decade);
 
 export const STEAL_SYNERGIES: StealSynergy[] = [
-  { id: "shake-bake", name: "Shake & Bake", desc: "Handles create the shot. The shot never misses.", target: "sc", amount: 4, test: (r) => r.jumpshot >= 86 && r.handles >= 86 },
-  { id: "lob-city", name: "Lob City", desc: "Throw it anywhere near the backboard.", target: "rp", amount: 4, test: (r) => r.finishing >= 86 && r.athleticism >= 88 },
-  { id: "no-fly-zone", name: "No-Fly Zone", desc: "The paint is closed for maintenance.", target: "def", amount: 3, test: (r) => r.defense >= 88 && r.athleticism >= 84 },
-  { id: "gravity-well", name: "Gravity Well", desc: "Shooting bends the defense. Vision punishes it.", target: "off", amount: 3, test: (r) => r.jumpshot >= 88 && r.playmaking >= 84 },
-  { id: "post-office", name: "Post Office", desc: "Old man game. Always delivers.", target: "rp", amount: 3, test: (r) => r.finishing >= 88 && r.playmaking >= 76 },
-  { id: "killer-instinct", name: "Killer Instinct", desc: "No hole in the game to attack.", target: "both", amount: 2, test: (r) => ATTRS.every((a) => r[a] >= 74) },
-  { id: "time-machine", name: "Time Machine", desc: "Stole across the whole history of the sport.", target: "both", amount: 2, test: (_r, steals) => new Set(decadesOf(steals)).size >= 4 },
+  { id: "shake-bake", name: "Shake & Bake", desc: "Handles create the shot. The shot never misses.", target: "sc", amount: 2, test: (r) => r.jumpshot >= 86 && r.handles >= 86 },
+  { id: "lob-city", name: "Lob City", desc: "Throw it anywhere near the backboard.", target: "rp", amount: 2, test: (r) => r.finishing >= 86 && r.athleticism >= 88 },
+  { id: "no-fly-zone", name: "No-Fly Zone", desc: "The paint is closed for maintenance.", target: "def", amount: 2, test: (r) => r.defense >= 88 && r.athleticism >= 84 },
+  { id: "gravity-well", name: "Gravity Well", desc: "Shooting bends the defense. Vision punishes it.", target: "off", amount: 1, test: (r) => r.jumpshot >= 88 && r.playmaking >= 84 },
+  { id: "post-office", name: "Post Office", desc: "Old man game. Always delivers.", target: "rp", amount: 1, test: (r) => r.finishing >= 88 && r.playmaking >= 76 },
+  { id: "killer-instinct", name: "Killer Instinct", desc: "No hole in the game to attack.", target: "both", amount: 1, test: (r) => ATTRS.every((a) => r[a] >= 74) },
+  { id: "time-machine", name: "Time Machine", desc: "Stole across the whole history of the sport.", target: "both", amount: 1, test: (_r, steals) => new Set(decadesOf(steals)).size >= 4 },
   {
-    id: "same-era", name: "Same Era Squad", desc: "One decade. One style. One body.", target: "off", amount: 3,
+    id: "same-era", name: "Same Era Squad", desc: "One decade. One style. One body.", target: "off", amount: 1,
     test: (_r, steals) => {
       const counts = new Map<number, number>();
       for (const decade of decadesOf(steals)) counts.set(decade, (counts.get(decade) ?? 0) + 1);
@@ -68,10 +69,43 @@ function activeSynergies(ratings: Record<AttrId, number>, steals: Steal[]): Stea
 }
 
 /* ------------------------------------------------------------------ */
+/* Diminishing-return display curve                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Six-Steals ratings use a stricter high-end curve than the frozen v1/v2
+ * builder. Above 76, every extra raw point buys less display rating; even the
+ * maximum legal synergy stack tops out at 97 instead of pinning three 99s.
+ */
+const STEAL_CURVE: ReadonlyArray<readonly [number, number]> = [
+  [0, 20],
+  [38, 45],
+  [47, 55],
+  [62, 74],
+  [70, 84],
+  [76, 88],
+  [82, 90],
+  [88, 91.5],
+  [94, 93],
+  [100, 95],
+  [105, 97],
+];
+
+export function stealCurve(raw: number): number {
+  if (raw <= STEAL_CURVE[0][0]) return STEAL_CURVE[0][1];
+  for (let i = 1; i < STEAL_CURVE.length; i++) {
+    const [x1, y1] = STEAL_CURVE[i - 1];
+    const [x2, y2] = STEAL_CURVE[i];
+    if (raw <= x2) return y1 + ((raw - x1) / (x2 - x1)) * (y2 - y1);
+  }
+  return STEAL_CURVE[STEAL_CURVE.length - 1][1];
+}
+
+/* ------------------------------------------------------------------ */
 /* Budget mode — prices                                                */
 /* ------------------------------------------------------------------ */
 
-/** The whole run's wallet (v5). Flaw severity refunds land after the wheel. */
+/** The whole run's wallet (v5+). Flaw severity refunds land after the wheel. */
 export const STEAL_BUDGET = 15;
 /** v4 wallet, frozen — old budget codes must keep validating and displaying. */
 export const STEAL_BUDGET_V4 = 20;
@@ -82,7 +116,8 @@ export const stealBudgetFor = (v: number): number => (v >= 5 ? STEAL_BUDGET : ST
  * where even a mild weakness pays $1 and the worst pay $3).
  */
 const V4_REFUNDS: Record<Flaw["severity"], number> = { Mild: 0, Bad: 1, Brutal: 2, "Career-Threatening": 3 };
-export const flawRefundFor = (flaw: Flaw, v: number): number => (v >= 5 ? flaw.refund : V4_REFUNDS[flaw.severity]);
+export const flawRefundFor = (flaw: Flaw, v: number): number =>
+  v >= 5 ? budgetRefundForSeverity(flaw.severity) : V4_REFUNDS[flaw.severity];
 
 /** The weakness wheel interrupts after this many steals. */
 export const WHEEL_AFTER = 3;
@@ -143,7 +178,7 @@ export function bestIn(bucket: EraBucket, attrIdx: number): EraPlayer {
 /* ------------------------------------------------------------------ */
 
 export function validateSteals(build: StealBuild): boolean {
-  if (build.v !== 3 && build.v !== 4 && build.v !== 5) return false;
+  if (build.v !== 3 && build.v !== 4 && build.v !== 5 && build.v !== 6) return false;
   if (!Array.isArray(build.steals) || build.steals.length !== ROUNDS) return false;
 
   const pool = poolFor(build.v);
@@ -178,7 +213,7 @@ export function validateSteals(build: StealBuild): boolean {
     let bucket: EraBucket;
     let playerIdx: number;
     if (positional) {
-      // positional v5: [decadeIdx, indexWithinTheDealtTwelve]
+      // positional v5+: [decadeIdx, indexWithinTheDealtTwelve]
       const decade = POS_DECADES[pair[0]];
       if (decade === undefined) return false;
       const t = minSpinsForPosDecade(build.seed, round, decade);
@@ -209,10 +244,10 @@ export function validateSteals(build: StealBuild): boolean {
     }
   }
 
-  return positional ? used.team <= POS_TOKENS : spinsAffordable(used, tokens);
+  return positional ? used.team <= posTokensFor(build.v) : spinsAffordable(used, tokens);
 }
 
-/** Positional decade wheel applies to v5 runs with a positional build target. */
+/** Positional decade wheel applies to v5+ runs with a positional build target. */
 export function isPositional(build: StealBuild): boolean {
   return build.v >= 5 && (build.target ?? "ALL") !== "ALL";
 }
@@ -295,12 +330,12 @@ export function deriveSteals(steals: Steal[], target: PositionMode = "ALL"): Ste
     profile.sc * shotCreationRaw + profile.rp * rimPressureRaw + profile.play * playmaking + bonus("off");
   const defenseRaw = defense * (0.7 + 0.3 * (athleticism / 99)) + bonus("def");
 
-  const offense = Math.round(curve(offenseRaw));
-  const defenseScore = Math.round(curve(defenseRaw));
+  const offense = Math.round(stealCurve(offenseRaw));
+  const defenseScore = Math.round(stealCurve(defenseRaw));
   const ovr = clamp(
     Math.round(profile.oOff * offense + profile.oDef * defenseScore + profile.oPlay * playmaking),
     40,
-    98
+    97
   );
 
   const synergies: SynergyHit[] = syn.map((s) => ({
@@ -312,8 +347,8 @@ export function deriveSteals(steals: Steal[], target: PositionMode = "ALL"): Ste
 
   return {
     ratings,
-    shotCreation: Math.round(curve(shotCreationRaw)),
-    rimPressure: Math.round(curve(rimPressureRaw)),
+    shotCreation: Math.round(stealCurve(shotCreationRaw)),
+    rimPressure: Math.round(stealCurve(rimPressureRaw)),
     offenseRaw,
     defenseRaw,
     offense,
@@ -322,7 +357,7 @@ export function deriveSteals(steals: Steal[], target: PositionMode = "ALL"): Ste
     athleticism,
     fatigueMod: clamp((athleticism - 68) / 16, -2.25, 1.75),
     ovr,
-    playerPower: 0.57 * offense + 0.34 * defenseScore + 0.09 * playmaking,
+    playerPower: ovr,
     synergies,
   };
 }
@@ -363,7 +398,7 @@ export function stealSimSeed(build: StealBuild, steals: Steal[]): number {
   const ids = steals.map((s) => s.player.id).join(".");
   const dailyKey = build.mode === "daily" ? `d${build.daily}` : "";
   if (build.v >= 4) {
-    // `v4:` for v4 codes is frozen; v5 hashes its own prefix (and its own player ids)
+    // `v4:` for v4 codes is frozen; v5+ hash their own versioned prefix and player ids.
     const flawId = build.flaw >= 0 ? FLAWS[build.flaw].id : "none";
     return fnv1a(`${ids}#${flawId}#v${build.v}:${build.mode}#${build.target ?? "ALL"}#${dailyKey}#${build.attempt}`);
   }

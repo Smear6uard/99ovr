@@ -10,14 +10,18 @@ import {
 } from "@/lib/types";
 
 /**
- * The positional wheel (v5, target ≠ ALL): no franchises — each round lands on
+ * The positional wheel (v5+, target ≠ ALL): no franchises — each round lands on
  * a DECADE of the build's position ("90s CENTERS") and deals a seeded 12 from
- * that decade's position pool. The two re-spin skips become decade re-spins.
+ * that decade's position pool. Current runs get one decade re-spin; v5 replay
+ * retains the original two-token allowance.
  * Everything here is pure and seeded; validation replays it byte-for-byte.
  */
 
-/** The two skips, as decade re-spins. */
-export const POS_TOKENS = 2;
+/** Current positional runs get one re-spin across the whole six-steal build. */
+export const POS_TOKENS = 1;
+/** Frozen allowance for already-published v5 positional codes. */
+export const LEGACY_POS_TOKENS = 2;
+export const posTokensFor = (version: number): number => version >= 6 ? POS_TOKENS : LEGACY_POS_TOKENS;
 /** Per-round slots: the landing plus up to two re-spins. */
 export const MAX_POS_SPINS = 2;
 /** Every landing deals this many players. */

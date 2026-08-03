@@ -1,6 +1,7 @@
 import { BUCKETS } from "@/data/eras";
 import { decadeTag } from "@/data/eras/authoring";
 import { DECADE_ROSTER_SUPPLEMENTS } from "@/data/eras/decade-rosters.generated";
+import { auditRatings } from "@/data/ratingsAudit";
 import type { EraBucket, EraPlayer, EraVibe, Franchise } from "@/lib/types";
 
 /**
@@ -24,12 +25,22 @@ function mergeInto(target: EraBucket, era: EraBucket): void {
     target.tag = era.tag;
   }
   for (const player of era.players) {
+    const audited = {
+      ...player,
+      r: auditRatings(
+        target.decade,
+        player.person,
+        player.r,
+        "authored",
+        `${target.franchise}:${target.decade}`
+      ),
+    };
     const existing = target.players.findIndex((p) => p.person === player.person);
     if (existing === -1) {
-      target.players.push({ ...player, id: `${target.id}:${player.person}` });
-    } else if (ratingSum(player) > ratingSum(target.players[existing])) {
+      target.players.push({ ...audited, id: `${target.id}:${player.person}` });
+    } else if (ratingSum(audited) > ratingSum(target.players[existing])) {
       // same human, two eras in one decade — keep the peak version, in place
-      target.players[existing] = { ...player, id: `${target.id}:${player.person}` };
+      target.players[existing] = { ...audited, id: `${target.id}:${player.person}` };
     }
   }
 }
@@ -45,7 +56,11 @@ function appendDecadeRoster(target: EraBucket): void {
   const existing = new Set(target.players.map((player) => player.person));
   for (const player of DECADE_ROSTER_SUPPLEMENTS[`${target.franchise}:${target.decade}`] ?? []) {
     if (existing.has(player.person)) continue;
-    target.players.push({ ...player, id: `${target.id}:${player.person}` });
+    target.players.push({
+      ...player,
+      id: `${target.id}:${player.person}`,
+      r: auditRatings(target.decade, player.person, player.r, "supplement", `${target.franchise}:${target.decade}`),
+    });
     existing.add(player.person);
   }
   const topAttributeAverage = target.players

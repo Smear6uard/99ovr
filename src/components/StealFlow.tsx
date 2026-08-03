@@ -6,7 +6,7 @@ import { POS_DECADES } from "@/data/positions";
 import { FLAWS } from "@/data/flaws";
 import { formatDailyBlock } from "@/lib/daily";
 import { encodeSteal } from "@/lib/encode";
-import { GRADE_HEX } from "@/lib/grade";
+import { GRADE_HEX, NO_WEAK_LINKS_MIN_GRADE, gradeAtLeast } from "@/lib/grade";
 import { freshSeed, usePrefersReducedMotion } from "@/lib/hooks";
 import { copyText, h2hUrl, resultText } from "@/lib/share";
 import { playSfx } from "@/lib/sfx";
@@ -16,7 +16,7 @@ import { STEAL_BUDGET, WHEEL_AFTER, canAffordSteal, priceIn, simulateSteals } fr
 import { maybeRecordBest } from "@/lib/storage";
 import { TIER_HEX, tierFor } from "@/lib/tiers";
 import { DECADE_POOL, ROUNDS, V4_TOKENS, bucketIndexAt, canRespin, respinBucketIndex, totalRespinsLeft, type SpinsUsed } from "@/lib/wheel";
-import { ATTR_LABELS, type PositionMode, type Steal, type StealBuild, type StealMode, type StealResult } from "@/lib/types";
+import { ATTR_LABELS, type PositionMode, type StealBuild, type StealMode, type StealResult } from "@/lib/types";
 import { AdSlot } from "@/components/AdSlot";
 import { FlawSpin } from "@/components/FlawSpin";
 import { GauntletLog } from "@/components/GauntletLog";
@@ -31,33 +31,54 @@ type Phase = "steal" | "wheel" | "sim" | "result";
 const ZERO: SpinsUsed = { team: 0, era: 0 };
 
 function BookendChips({ result }: { result: StealResult }) {
-  const rows: Array<{ title: string; steal: Steal; hex: string }> = [
-    { title: "BEST STEAL", steal: result.bestSteal, hex: "#3fb68b" },
-    { title: "THE REACH", steal: result.reach, hex: "#e5484d" },
-  ];
+  const noWeakLinks = gradeAtLeast(result.reach.grade, NO_WEAK_LINKS_MIN_GRADE);
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">
-      {rows.map((row) => (
-        <div key={row.title} className="rounded-lg border-2 bg-panel px-3 py-2.5" style={{ borderColor: row.hex }}>
+      <div className="rounded-lg border-2 bg-panel px-3 py-2.5" style={{ borderColor: "#3fb68b" }}>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-bold tracking-[0.2em] text-win">BEST STEAL</span>
+          <span
+            className="inline-flex h-5 min-w-7 items-center justify-center border font-display text-[12px]"
+            style={{ borderColor: GRADE_HEX[result.bestSteal.grade], color: GRADE_HEX[result.bestSteal.grade] }}
+          >
+            {result.bestSteal.grade}
+          </span>
+        </div>
+        <p className="mt-1 truncate font-display text-lg uppercase leading-tight text-paper">
+          {result.bestSteal.player.name}
+        </p>
+        <p className="truncate text-[9px] tracking-[0.12em] text-dim">
+          {ATTR_LABELS[result.bestSteal.attr].toUpperCase()} · {result.bestSteal.bucket.label}
+        </p>
+      </div>
+
+      {noWeakLinks ? (
+        <div className="rounded-lg border-2 border-win bg-panel px-3 py-2.5">
+          <div className="text-[9px] font-bold tracking-[0.2em] text-win">NO WEAK LINKS</div>
+          <p className="mt-1 font-display text-lg uppercase leading-tight text-paper">Six clean steals</p>
+          <p className="text-[9px] tracking-[0.12em] text-dim">
+            EVERY PICK {NO_WEAK_LINKS_MIN_GRADE} OR BETTER
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border-2 bg-panel px-3 py-2.5" style={{ borderColor: "#e5484d" }}>
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold tracking-[0.2em]" style={{ color: row.hex }}>
-              {row.title}
-            </span>
+            <span className="text-[9px] font-bold tracking-[0.2em] text-loss">THE REACH</span>
             <span
               className="inline-flex h-5 min-w-7 items-center justify-center border font-display text-[12px]"
-              style={{ borderColor: GRADE_HEX[row.steal.grade], color: GRADE_HEX[row.steal.grade] }}
+              style={{ borderColor: GRADE_HEX[result.reach.grade], color: GRADE_HEX[result.reach.grade] }}
             >
-              {row.steal.grade}
+              {result.reach.grade}
             </span>
           </div>
           <p className="mt-1 truncate font-display text-lg uppercase leading-tight text-paper">
-            {row.steal.player.name}
+            {result.reach.player.name}
           </p>
           <p className="truncate text-[9px] tracking-[0.12em] text-dim">
-            {ATTR_LABELS[row.steal.attr].toUpperCase()} · {row.steal.bucket.label}
+            {ATTR_LABELS[result.reach.attr].toUpperCase()} · {result.reach.bucket.label}
           </p>
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -193,7 +214,7 @@ export function StealFlow({
     (steals: Array<[number, number]>, withAttempt: number) => {
       if (seed === null) return;
       const build: StealBuild = {
-        v: 5,
+        v: 6,
         mode,
         seed,
         flaw: budgetMode ? (flawIdx ?? 0) : -1,

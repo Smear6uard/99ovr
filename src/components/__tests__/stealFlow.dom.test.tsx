@@ -84,13 +84,14 @@ describe("a full Classic run", () => {
     // ...then everything on a single screen, zero taps required
     expect(screen.getByText("Run it back")).toBeTruthy();
     expect(screen.getByText("BEST STEAL")).toBeTruthy();
-    expect(screen.getByText("THE REACH")).toBeTruthy();
+    expect(screen.getByText("NO WEAK LINKS")).toBeTruthy();
+    expect(screen.queryByText("THE REACH")).toBeNull();
     expect(screen.getByText(/VIEW LOG/i)).toBeTruthy();
     expect(screen.getByText(/challenge a friend/i)).toBeTruthy();
 
     // the result matches an independent simulation of the same run
     const expectedResult = simulateSteals({
-      v: 5, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      v: 6, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
       steals: expected, attempt: 0, daily: 0, knowledge: false,
     });
     expect(expectedResult).not.toBeNull();
@@ -111,7 +112,7 @@ describe("a full Classic run", () => {
     const expected = await playClassicRun();
     await waitSim();
     const rebuilt = simulateSteals({
-      v: 5, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
+      v: 6, mode: "classic", seed: SEED, flaw: -1, target: "ALL",
       steals: expected, attempt: 0, daily: 0, knowledge: false,
     })!;
     const code = encodeSteal(rebuilt.build);
@@ -168,7 +169,7 @@ describe("a full Budget run", () => {
     expect(screen.getByText("Run it back")).toBeTruthy();
     // the card carries flaw + refund and the budget receipt
     const build: StealBuild = {
-      v: 5, mode: "budget", seed: SEED, flaw: flawIdx, target: "ALL",
+      v: 6, mode: "budget", seed: SEED, flaw: flawIdx, target: "ALL",
       steals, attempt: 0, daily: 0, knowledge: false,
     };
     const result = simulateSteals(build)!;
@@ -242,6 +243,17 @@ describe("re-spins", () => {
     expect(screen.getByText(/locked target · shooting guard/i)).toBeTruthy();
     expect(screen.getAllByText(/^DECADE$/)).toHaveLength(1);
     expect(screen.queryByText(/^POSITION$/)).toBeNull();
+  });
+
+  it("gives a fixed-position build one total re-spin", async () => {
+    stubMatchMedia(true);
+    render(<StealFlow mode="classic" fixedSeed={SEED} target="SG" />);
+    expect(screen.getByText("1")).toBeTruthy();
+    await click(screen.getByRole("button", { name: /^spin$/i }));
+    const respin = screen.getByRole("button", { name: /decade re-spin/i });
+    expect(respin).toHaveProperty("disabled", false);
+    await click(respin);
+    expect(screen.getByRole("button", { name: /decade re-spin/i })).toHaveProperty("disabled", true);
   });
 });
 

@@ -72,12 +72,12 @@ export function memberInitials(member: string): string {
 /**
  * Server-side gatekeeping for a submitted build code. The score is never taken
  * from the client — only the code, which must be today's official daily:
- * v4, daily mode, attempt 0, today's seed, every landing actually reachable
+ * v4+, daily mode, attempt 0, today's seed, every landing actually reachable
  * from today's wheel within the run's re-spins (validateSteals covers both).
  */
 export function validateDailySubmission(build: StealBuild, todayStr: string): string | null {
-  // v4 stays accepted through the v5 cutover — stale clients submit v4 codes
-  if ((build.v !== 4 && build.v !== 5) || build.mode !== "daily") return "not a daily build";
+  // Older official clients stay accepted across rules-version cutovers.
+  if ((build.v !== 4 && build.v !== 5 && build.v !== 6) || build.mode !== "daily") return "not a daily build";
   if (build.attempt !== 0) return "not an official attempt";
   if (build.daily !== dailyNumberFor(todayStr)) return "not today's daily";
   if (build.seed !== dailySeed(todayStr)) return "seed mismatch";

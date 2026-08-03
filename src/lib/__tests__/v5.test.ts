@@ -8,12 +8,14 @@ import { dailyNumberFor, dailySeed, dailyTargetFor, utcDateString } from "@/lib/
 import { decodeSteal, encodeSteal } from "@/lib/encode";
 import { validateDailySubmission } from "@/lib/leaderboard";
 import {
+  LEGACY_POS_TOKENS,
   POS_DRAW,
   POS_TOKENS,
   drawnPosPool,
   minSpinsForPosDecade,
   posBucketFor,
   posDecadeSlots,
+  posTokensFor,
 } from "@/lib/poswheel";
 import { mulberry32 } from "@/lib/rng";
 import {
@@ -285,6 +287,36 @@ describe("positional runs", () => {
       expect(result.steals.every((s) => s.bucket.label.endsWith("S"))).toBe(true);
       expect(decodeSteal(encodeSteal(build))).toEqual(build);
     }
+  });
+
+  it("gives v6 one positional re-spin without invalidating v5 two-spin codes", () => {
+    expect(POS_TOKENS).toBe(1);
+    expect(LEGACY_POS_TOKENS).toBe(2);
+    expect(posTokensFor(5)).toBe(2);
+    expect(posTokensFor(6)).toBe(1);
+
+    const seed = 0x606;
+    const build = v5Positional(seed, "PG");
+    const respun: StealBuild = { ...build, steals: build.steals.map((pair) => [...pair] as [number, number]) };
+    const personAt = (candidate: StealBuild, round: number) =>
+      drawnPosPool(candidate.seed, round, POS_DECADES[candidate.steals[round][0]], "PG")[candidate.steals[round][1]].person;
+    for (const round of [0, 1]) {
+      const decade = posDecadeSlots(seed, round)[1];
+      const otherPeople = new Set(respun.steals.map((_pair, otherRound) =>
+        otherRound === round ? "" : personAt(respun, otherRound)
+      ));
+      const drawn = drawnPosPool(seed, round, decade, "PG");
+      const playerIdx = drawn.findIndex((player) => !otherPeople.has(player.person));
+      respun.steals[round] = [POS_DECADES.indexOf(decade as (typeof POS_DECADES)[number]), playerIdx];
+    }
+
+    expect(validateSteals(respun)).toBe(true);
+    const current: StealBuild = { ...respun, v: 6 };
+    expect(validateSteals(current)).toBe(false);
+
+    const legalCurrent: StealBuild = { ...v5Positional(seed, "PG"), v: 6 };
+    expect(validateSteals(legalCurrent)).toBe(true);
+    expect(decodeSteal(encodeSteal(legalCurrent))).toEqual(legalCurrent);
   });
 
   it("rejects out-of-draw picks, unreachable decades, and over-budget re-spins", () => {

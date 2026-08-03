@@ -4,6 +4,7 @@ import { gauntletFor } from "@/data/gauntlet";
 import { assignArchetype } from "@/data/archetypes";
 import { ROASTS } from "@/data/roasts";
 import { BEATS } from "@/data/narrative";
+import { budgetRefundForSeverity } from "@/config/flawEconomy";
 import { fnv1a, mulberry32, type Rng } from "@/lib/rng";
 import {
   LEGACY_SLOTS,
@@ -134,9 +135,9 @@ export function deriveBuild(entries: PoolEntry[], position: PositionMode = "ALL"
   const ovr = legacy
     ? clamp(Math.round(0.5 * curve(offenseRaw) + 0.35 * curve(defenseRaw) + 0.15 * iq), 40, 99)
     : clamp(Math.round(profile.off * profileOff + profile.def * defense + profile.iq * iq + profile.pass * passing), 40, 95);
-  const playerPower = legacy
-    ? 0.6 * curve(offenseRaw) + 0.4 * curve(defenseRaw)
-    : 0.57 * profileOff + 0.34 * defense + 0.05 * iq + 0.04 * passing;
+  // The gauntlet is calibrated on the number printed on the card. Keeping a
+  // second hidden blend here was what let a lower OVR outperform a higher one.
+  const playerPower = ovr;
   const fatigueMod = legacy ? 0 : clamp((durability - 68) / 16, -2.25, 1.75);
 
   const synergies: SynergyHit[] = syn.map((s) => ({
@@ -216,11 +217,31 @@ export type GauntletInput = { playerPower: number; fatigueMod: number; durabilit
 
 /** Outside this gap, the matchup is decided by build quality rather than a lottery upset. */
 export const GAUNTLET_UPSET_WINDOW = 12;
+export const GAUNTLET_LOGISTIC_DIVISOR = 3;
+export const GAUNTLET_VARIANCE_CAP = 1.5;
+export const GAUNTLET_DOMINANCE_GAP = 3;
+export const GAUNTLET_DOMINANCE_FLOOR = 0.85;
+
+/** Pointwise-monotone win chance used by both the sim and calibration tests. */
+export function gauntletWinProbability(
+  playerPower: number,
+  bossPower: number,
+  variance = 0,
+  matchupMod = 0
+): number {
+  const powerDiff = playerPower - bossPower;
+  const matchupDiff = powerDiff + matchupMod;
+  const boundedVariance = clamp(variance, -GAUNTLET_VARIANCE_CAP, GAUNTLET_VARIANCE_CAP);
+  const logistic = 1 / (1 + Math.exp(-(matchupDiff + boundedVariance) / GAUNTLET_LOGISTIC_DIVISOR));
+  return powerDiff >= GAUNTLET_DOMINANCE_GAP
+    ? Math.max(GAUNTLET_DOMINANCE_FLOOR, logistic)
+    : logistic;
+}
 
 /**
  * `flatInjuryRisk` skips the durability scaling on injury flaws — true for v1
  * (no durability slot yet) and for v3 (durability removed; the flaw carries it).
- * `flaw` is null for v4 classic/daily runs — no flaw ticks, ever.
+ * `flaw` is null for v4+ classic/daily runs — no flaw ticks, ever.
  */
 export function runGauntlet(derived: GauntletInput, flaw: Flaw | null, simSeed: number, gauntlet: Rung[], flatInjuryRisk = false): { rungs: RungResult[]; fellAt: number | null; injured: boolean } {
   const legacy = flatInjuryRisk;
@@ -231,7 +252,7 @@ export function runGauntlet(derived: GauntletInput, flaw: Flaw | null, simSeed: 
 
   for (const opp of gauntlet) {
     // Fixed per-rung draw order — determinism depends on this.
-    const variance = rng() * 6 - 3;
+    const variance = (rng() * 2 - 1) * GAUNTLET_VARIANCE_CAP;
     const flawRoll = rng();
     const winRoll = rng();
     const scoreNoise = rng();
@@ -260,10 +281,9 @@ export function runGauntlet(derived: GauntletInput, flaw: Flaw | null, simSeed: 
       break;
     }
 
-    const fatigue = opp.rung >= 6 ? derived.fatigueMod * (opp.rung - 5) : 0;
-    const matchupDiff = derived.playerPower - opp.power + tick.mod + fatigue;
+    const matchupDiff = derived.playerPower - opp.power + tick.mod;
     const diff = matchupDiff + variance;
-    const p = 1 / (1 + Math.exp(-diff / 6));
+    const p = gauntletWinProbability(derived.playerPower, opp.power, variance, tick.mod);
     const win = matchupDiff >= GAUNTLET_UPSET_WINDOW
       ? true
       : matchupDiff <= -GAUNTLET_UPSET_WINDOW
@@ -336,9 +356,9 @@ export function validateBuild(build: BuildCode): boolean {
   const entries = entriesFor(build);
   if (!entries) return false;
   if (build.flaw < 0 || build.flaw >= (build.v === 1 ? 10 : FLAWS.length)) return false;
-  // frozen v2 refund scale — FLAWS[].refund now carries the v5 Budget values
-  const v2Refunds = { Mild: 0, Bad: 1, Brutal: 2, "Career-Threatening": 3 } as const;
-  const budget = build.v === 1 ? LEGACY_BUDGET : BUDGET + v2Refunds[FLAWS[build.flaw].severity];
+  const budget = build.v === 1
+    ? LEGACY_BUDGET
+    : BUDGET + budgetRefundForSeverity(FLAWS[build.flaw].severity);
   if (entries.reduce((a, e) => a + e.price, 0) > budget) return false;
   if (build.v === 2) {
     const position = build.position ?? "ALL";

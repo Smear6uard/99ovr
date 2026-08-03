@@ -6,6 +6,7 @@ import { BUDGET, curve, deriveBuild, runGauntlet, simSeedFor, simulate, validate
 import { canPick, drawShop } from "@/lib/shop";
 import { POSITIONS, SLOTS, type BuildCode, type SlotId } from "@/lib/types";
 import { tierFor } from "@/lib/tiers";
+import { BUDGET_REFUND_BY_SEVERITY } from "@/config/flawEconomy";
 
 const pickAtPrice = (slot: SlotId, price: number, best = false) => {
   const choices = POOL[slot].map((entry, index) => ({ entry, index })).filter(({ entry }) => entry.price === price);
@@ -109,6 +110,29 @@ describe("gauntlet calibration", () => {
 });
 
 describe("budget and flaw refunds", () => {
+  it("pays legacy Budget $1/$2/$3 according to weakness severity", () => {
+    expect(BUDGET_REFUND_BY_SEVERITY).toEqual({
+      Mild: 1,
+      Bad: 2,
+      Brutal: 3,
+      "Career-Threatening": 3,
+    });
+    const mild = FLAWS.findIndex((flaw) => flaw.severity === "Mild");
+    const prices = [5, 4, 3, 2, 2, 2, 2, 1]; // $21: needs the mild +$1 payout
+    const build: BuildCode = {
+      v: 2,
+      mode: "sandbox",
+      seed: 21,
+      position: "ALL",
+      picks: SLOTS.map((slot, index) => pickAtPrice(slot, prices[index])),
+      flaw: mild,
+      attempt: 0,
+      daily: 0,
+      knowledge: false,
+    };
+    expect(validateBuild(build)).toBe(true);
+  });
+
   it("starts at $20 and adds the selected flaw refund", () => {
     expect(BUDGET).toBe(20);
     expect(Math.max(...FLAWS.map((flaw) => flaw.refund))).toBe(3);

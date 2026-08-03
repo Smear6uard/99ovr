@@ -3,8 +3,9 @@ import type { Grade } from "@/lib/types";
 /** Best → worst. Index doubles as the score used for BEST STEAL / THE REACH. */
 export const GRADES: Grade[] = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"];
 
-const BANDS: Array<[number, Grade]> = [
-  [0.98, "A+"],
+/** Shared percentile floors. Copy that names a grade threshold imports this module too. */
+export const GRADE_PERCENTILE_BANDS: ReadonlyArray<readonly [number, Grade]> = [
+  [0.95, "A+"],
   [0.9, "A"],
   [0.8, "A-"],
   [0.7, "B+"],
@@ -24,13 +25,19 @@ const BANDS: Array<[number, Grade]> = [
 export function gradeFor(rank: number, rosterSize: number): Grade {
   if (rosterSize <= 1) return "A+";
   const pct = 1 - rank / (rosterSize - 1);
-  for (const [floor, grade] of BANDS) if (pct >= floor) return grade;
+  for (const [floor, grade] of GRADE_PERCENTILE_BANDS) if (pct >= floor) return grade;
   return "F";
 }
 
 /** 0 (F) → 11 (A+). Higher is better. */
 export function gradeScore(grade: Grade): number {
   return GRADES.length - 1 - GRADES.indexOf(grade);
+}
+
+export const NO_WEAK_LINKS_MIN_GRADE: Grade = "A-";
+
+export function gradeAtLeast(grade: Grade, floor: Grade): boolean {
+  return gradeScore(grade) >= gradeScore(floor);
 }
 
 export const GRADE_HEX: Record<Grade, string> = {

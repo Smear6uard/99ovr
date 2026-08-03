@@ -2,7 +2,7 @@
 
 import { SITE_URL } from "@/config/site";
 import { gradeStrip } from "@/lib/daily";
-import { STEAL_BUDGET } from "@/lib/steal";
+import { stealBudgetFor } from "@/lib/steal";
 import { TIER_NAMES, tierFor } from "@/lib/tiers";
 import type { SimResult, StealResult } from "@/lib/types";
 
@@ -40,11 +40,11 @@ export function resultText(result: StealResult, code: string): string {
     archetype.name,
   ];
   if (build.knowledge) lines.push("🧠 Ball Knowledge (names only)");
-  if (build.v === 4 && build.mode === "budget") {
-    lines.push(`💰 $${result.spent} of $${STEAL_BUDGET + result.refund} · Flaw: ${result.flaw?.name ?? "—"}`);
+  if (build.v >= 4 && build.mode === "budget") {
+    lines.push(`💰 $${result.spent} of $${stealBudgetFor(build.v) + result.refund} · Flaw: ${result.flaw?.name ?? "—"}`);
   }
   const challenge =
-    build.v === 4 && build.mode === "classic"
+    build.v >= 4 && build.mode === "classic"
       ? `Can you beat it? → ${h2hUrl(code)}`
       : `Beat my build → ${buildUrl(code)}`;
   lines.push(roundLine, squaresFor(fellAt), challenge);

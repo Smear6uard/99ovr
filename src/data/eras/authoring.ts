@@ -1,4 +1,5 @@
 import type { EraBucket, EraPlayer, EraVibe, Ratings } from "@/lib/types";
+import { auditRatings } from "@/data/ratingsAudit";
 
 /**
  * Authoring helpers for the team-era pool. Kept tiny on purpose — the data
@@ -46,21 +47,27 @@ export const era = (
   vibe: EraVibe,
   tag: string,
   drafts: Draft[]
-): EraBucket => ({
-  id,
-  franchise,
-  team,
-  season,
-  label: `${decadeTag(Math.floor(Number(season) / 10) * 10)} ${team}`,
-  decade: Math.floor(Number(season) / 10) * 10,
-  vibe,
-  tag,
-  players: drafts.map<EraPlayer>((d) => ({
-    id: `${id}:${slug(d.name)}`,
-    person: slug(d.name),
-    name: d.name,
-    line: d.line,
-    note: d.note,
-    r: d.r,
-  })),
-});
+): EraBucket => {
+  const decade = Math.floor(Number(season) / 10) * 10;
+  return {
+    id,
+    franchise,
+    team,
+    season,
+    label: `${decadeTag(decade)} ${team}`,
+    decade,
+    vibe,
+    tag,
+    players: drafts.map<EraPlayer>((d) => {
+      const person = slug(d.name);
+      return {
+        id: `${id}:${person}`,
+        person,
+        name: d.name,
+        line: d.line,
+        note: d.note,
+        r: auditRatings(decade, person, d.r, "authored", id),
+      };
+    }),
+  };
+};

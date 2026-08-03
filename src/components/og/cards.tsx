@@ -520,7 +520,7 @@ function stealModeChip(result: StealResult): string {
   const { build } = result;
   if (build.mode === "daily") return `DAILY #${build.daily}`;
   if (build.mode === "budget") return "BUDGET";
-  if (build.v === 4) return "CLASSIC";
+  if (build.mode === "classic") return "CLASSIC";
   return "SIX STEALS";
 }
 

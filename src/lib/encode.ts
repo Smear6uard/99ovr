@@ -153,7 +153,7 @@ export function encodeSteal(build: StealBuild): string {
 export function decodeSteal(code: string): StealBuild | null {
   const bytes = fromBase64Url(code);
   if (!bytes) return null;
-  if ((bytes[0] === 4 || bytes[0] === 5) && bytes.length === V4_BYTES) return decodeStealV4(bytes);
+  if ((bytes[0] === 4 || bytes[0] === 5 || bytes[0] === 6) && bytes.length === V4_BYTES) return decodeStealV4(bytes);
   if (bytes[0] !== 3 || bytes.length !== V3_BYTES) return null;
   if (checksum(bytes, 23) !== bytes[23]) return null;
   const flags = modeFrom(bytes[1]);
@@ -172,13 +172,13 @@ export function decodeSteal(code: string): StealBuild | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* v4 — Four modes                                                     */
+/* v4+ — Four modes and versioned wheel rules                          */
 /* ------------------------------------------------------------------ */
 
 /**
- * 25 bytes → 34 base64url chars. v5 is byte-identical except the version
- * byte — its steal indices address the decade pool instead of the era pool.
- *   0      version = 4 · 5
+ * 25 bytes → 34 base64url chars. v5/v6 are byte-identical except the version
+ * byte — their steal indices address the decade pool instead of the era pool.
+ *   0      version = 4 · 5 · 6
  *   1      mode (0 classic · 1 daily · 2 budget) | knowledge << 7
  *   2      build target (0 ALL · 1–5 PG…C)
  *   3–6    seed (u32)
@@ -219,7 +219,7 @@ function decodeStealV4(bytes: Uint8Array): StealBuild | null {
   const steals: Array<[number, number]> = [];
   for (let i = 0; i < ROUNDS; i++) steals.push([bytes[8 + i * 2], bytes[9 + i * 2]]);
   const build: StealBuild = {
-    v: bytes[0] as 4 | 5,
+    v: bytes[0] as 4 | 5 | 6,
     mode,
     knowledge: (bytes[1] & 0x80) !== 0,
     target,

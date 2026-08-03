@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { BUCKETS } from "@/data/eras";
 import { FLAWS } from "@/data/flaws";
 import { mulberry32 } from "@/lib/rng";
-import { GRADES, gradeFor, gradeScore, gradeEmoji } from "@/lib/grade";
+import {
+  GRADE_PERCENTILE_BANDS,
+  GRADES,
+  NO_WEAK_LINKS_MIN_GRADE,
+  gradeAtLeast,
+  gradeEmoji,
+  gradeFor,
+  gradeScore,
+} from "@/lib/grade";
 import { deriveSteals, simulateSteals, stealsFor, validateSteals } from "@/lib/steal";
 import { tierFor } from "@/lib/tiers";
 import { ROUNDS, bucketIndexAt, minSpinsFor, tokensFor } from "@/lib/wheel";
@@ -30,6 +38,14 @@ const best = buildFor(0xc0ffee, () => 0);
 const worst = buildFor(0xc0ffee, (r) => r.length - 1);
 
 describe("grading", () => {
+  it("defines the A+ and no-weak-links thresholds once", () => {
+    expect(GRADE_PERCENTILE_BANDS[0]).toEqual([0.95, "A+"]);
+    expect(NO_WEAK_LINKS_MIN_GRADE).toBe("A-");
+    expect(gradeAtLeast("A+", NO_WEAK_LINKS_MIN_GRADE)).toBe(true);
+    expect(gradeAtLeast("A-", NO_WEAK_LINKS_MIN_GRADE)).toBe(true);
+    expect(gradeAtLeast("B+", NO_WEAK_LINKS_MIN_GRADE)).toBe(false);
+  });
+
   it("gives A+ only to the roster's best and F only near the bottom", () => {
     expect(gradeFor(0, 12)).toBe("A+");
     expect(gradeFor(11, 12)).toBe("F");
@@ -139,6 +155,43 @@ describe("rating tuning", () => {
     const max = deriveSteals(topSteals).ovr;
     expect(max).toBeGreaterThanOrEqual(96); // GOAT is reachable...
     expect(max).toBeLessThanOrEqual(98); // ...99 is not
+  });
+
+  it("makes GOAT rare across seeded strong builds while the true ceiling reaches 97", () => {
+    const rng = mulberry32(0x51a0c);
+    const template = stealsFor(best)!;
+    const decades = [2010, 2010, 2010, 2000, 1990, 1980];
+    const ovrs: number[] = [];
+    let goat = 0;
+    let pinnedComposite = 0;
+    for (let run = 0; run < 10_000; run++) {
+      const strong = template.map((steal, index) => ({
+        ...steal,
+        rating: 86 + Math.floor(rng() * 14),
+        bucket: { ...steal.bucket, decade: decades[index] },
+      }));
+      const derived = deriveSteals(strong);
+      ovrs.push(derived.ovr);
+      if (tierFor(derived.ovr) === "goat") goat++;
+      if ([derived.shotCreation, derived.rimPressure, derived.offense, derived.defense].includes(99)) {
+        pinnedComposite++;
+      }
+    }
+    ovrs.sort((a, b) => a - b);
+    const median = ovrs[Math.floor(ovrs.length / 2)];
+    expect(median).toBeGreaterThanOrEqual(92);
+    expect(median).toBeLessThanOrEqual(94);
+    expect(goat / ovrs.length).toBeLessThan(0.02);
+    expect(pinnedComposite).toBe(0);
+
+    const perfect = template.map((steal, index) => ({
+      ...steal,
+      rating: 99,
+      bucket: { ...steal.bucket, decade: decades[index] },
+    }));
+    const ceiling = deriveSteals(perfect);
+    expect(ceiling.ovr).toBe(97);
+    expect(Math.max(ceiling.shotCreation, ceiling.rimPressure, ceiling.offense, ceiling.defense)).toBe(97);
   });
 
   it("puts worst-available roster-reading in the basement", () => {

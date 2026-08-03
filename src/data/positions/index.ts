@@ -1,4 +1,5 @@
 import { slug } from "@/data/eras/authoring";
+import { auditRatings } from "@/data/ratingsAudit";
 import { SIXTIES_POOL } from "@/data/positions/sixties";
 import { SEVENTIES_POOL } from "@/data/positions/seventies";
 import { EIGHTIES_POOL } from "@/data/positions/eighties";
@@ -40,7 +41,7 @@ export const POSITION_POOLS: Record<number, Record<Position, EraPlayer[]>> = (()
           name: d.name,
           line: d.line,
           note: d.note,
-          r: d.r,
+          r: auditRatings(decade, slug(d.name), d.r, "authored", "position"),
         }));
     }
     out[decade] = perPos;

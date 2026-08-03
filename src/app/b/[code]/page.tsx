@@ -65,7 +65,7 @@ export default async function BuildPage({ params }: Props) {
       ? `DAILY #${loaded.result.build.daily}`
       : loaded.result.build.mode === "budget"
         ? "BUDGET"
-        : loaded.result.build.v === 4
+        : loaded.result.build.mode === "classic"
           ? "CLASSIC"
           : "SHARED RUN"
     : "BUDGET BALL (LEGACY)";
