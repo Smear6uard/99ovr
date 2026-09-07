@@ -104,7 +104,7 @@ export default function Privacy() {
         </p>
         <p>
           For questions or a data request, email{" "}
-          <a href="mailto:sameer@sameerstuidos.com">sameer@sameerstuidos.com</a>
+          <a href="mailto:sameer@sameerstudios.com">sameer@sameerstudios.com</a>
           . Identify the relevant initials, date or shared link without sending
           sensitive information. Because the game has no accounts, identifying a
           specific record may require more context. Contact emails and

@@ -11,7 +11,7 @@ export default function Contact() {
       <Section title="Talk to the publisher">
         <p>
           Email{" "}
-          <a href="mailto:sameer@sameerstuidos.com">sameer@sameerstuidos.com</a>{" "}
+          <a href="mailto:sameer@sameerstudios.com">sameer@sameerstudios.com</a>{" "}
           for game feedback, bug reports, privacy questions or rights concerns.
         </p>
       </Section>

@@ -3,7 +3,7 @@
 ## Implemented
 - Kept the game, roster data, rating formulas, seeds, budgets, leaderboards and simulations intact. Changes within gameplay components remove ad calls, correct heading levels and perform behavior-preserving lint cleanup.
 - Added a visible server-rendered publisher layer with existing cabinet colors, fonts, responsive width and readable typography.
-- Added permanent Contact, Privacy and Terms pages, using the owner-supplied Sameer Studios LLC and sameer@sameerstuidos.com exactly (with title casing for the publisher name).
+- Added permanent Contact, Privacy and Terms pages, using the owner-supplied Sameer Studios LLC and sameer@sameerstudios.com exactly (with title casing for the publisher name).
 - Expanded navigation/footer, added a keyboard skip link, maintained focus styling and removed the unfinished donation placeholder.
 - Added real custom 404 and retryable error UI. Invalid build/challenge URLs continue to use server validation and return 404.
 - Added lint/typecheck commands, ESLint configuration and a production HTTP/HTML smoke suite.
@@ -33,13 +33,13 @@ Existing ads.txt matches `pub-9476228948751191`. Before deployment, www ads.txt 
 ## Policy risks remaining
 - Google decides approval; publisher content and technical improvements are not an approval guarantee.
 - Auto Ads placement, consent messages/CMP and regional privacy configuration require account-level verification. Removing game ad calls does not certify a dashboard configuration.
-- Email spelling is the owner's supplied `sameerstuidos.com`; mailbox delivery has not been tested. Provider log/backup retention and mail retention are not established by the repository.
+- Email spelling is the owner's supplied `sameerstudios.com`; mailbox delivery has not been tested. Provider log/backup retention and mail retention are not established by the repository.
 - An optional package audit reports four high-severity dependency entries affecting the existing Next.js/transitive runtime stack (Next.js, PostCSS, sharp and nanoid). This content task does not upgrade the framework. Schedule a dependency security update and regression review separately.
 - Tests use no live leaderboard credentials and do not submit real leaderboard scores. Existing unit tests cover validation and scoring; production KV availability is account-dependent.
 - Existing Vitest deprecation/local-storage warnings are non-failing. The bundled Playwright CLI wrapper was unavailable, so visual/keyboard checks used the connected browser's Playwright/UI controls instead.
 
 ## Manual actions required
-1. Verify that `sameer@sameerstuidos.com` is the intended, deliverable mailbox and that the publisher details are suitable for public display. Confirm provider/log/mail retention practices and update the privacy policy if needed.
+1. Verify that `sameer@sameerstudios.com` is the intended, deliverable mailbox and that the publisher details are suitable for public display. Confirm provider/log/mail retention practices and update the privacy policy if needed.
 2. In AdSense, configure Auto Ads page exclusions for `/daily`, `/play`, `/classic`, `/budget`, `/h2h` and descendants, `/b` and descendants, `/api` and descendants, `/privacy`, `/terms`, `/contact` and errors. Disable anchor/vignette formats or other placements that interfere with navigation/game controls. Inspect the actual published pages after ads become eligible.
 3. Verify/configure Google's required certified CMP for EEA/UK/Switzerland advertising and applicable regional consent/privacy messages; the repository does not establish dashboard consent settings. Provide a working way to revisit consent choices where required.
 4. After deployment, submit `https://www.99ovr.app/sitemap.xml` in Search Console, inspect key URLs and request indexing as appropriate. Verify both hosts and ads.txt.

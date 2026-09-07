@@ -61,7 +61,7 @@ export default function Terms() {
       <Section title="Questions or rights concerns">
         <p>
           Email{" "}
-          <a href="mailto:sameer@sameerstuidos.com">sameer@sameerstuidos.com</a>
+          <a href="mailto:sameer@sameerstudios.com">sameer@sameerstudios.com</a>
           . Include enough information to identify the content or issue. Revised
           terms will be posted here when the service’s terms change.
         </p>

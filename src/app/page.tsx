@@ -69,7 +69,7 @@ export default function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "WebSite", name: "99OVR", url: SITE_URL,
         description: "A browser basketball game built around six skill selections and a ten-boss gauntlet.",
-        publisher: { "@type": "Organization", name: "Sameer Studios LLC", email: "sameer@sameerstuidos.com" },
+        publisher: { "@type": "Organization", name: "Sameer Studios LLC", email: "sameer@sameerstudios.com" },
       }) }} />
       <PublisherAds />
       {/* ---------- HERO ---------- */}
