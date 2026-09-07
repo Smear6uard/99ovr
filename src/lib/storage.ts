@@ -1,6 +1,6 @@
 "use client";
 
-/** localStorage helpers — the only persistence in the game. */
+/** localStorage helpers — browser-local progress; optional leaderboard persistence is server-side. */
 
 export type DailyRecord = {
   date: string;

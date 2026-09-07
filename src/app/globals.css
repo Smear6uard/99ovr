@@ -281,3 +281,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Publisher pages follow the cabinet's existing type, color and narrow layout. */
+.publisher-content { font-size: 15px; line-height: 1.75; color: var(--color-paper); overflow-wrap: anywhere; }
+.publisher-content h1 { font-family: var(--font-display); font-size: 2.5rem; line-height: 1.1; text-transform: uppercase; margin: .5rem 0 1rem; }
+.publisher-content h2 { font-family: var(--font-display); font-size: 1.45rem; line-height: 1.25; color: var(--color-gold); text-transform: uppercase; margin-bottom: .65rem; }
+.publisher-content section { margin-top: 2rem; }
+.publisher-content p + p { margin-top: .85rem; }
+.publisher-content a { color: var(--color-gold); text-decoration: underline; text-underline-offset: 4px; }
+.publisher-content .intro { color: var(--color-paper); font-size: 16px; }
+.publisher-content .eyebrow { color: var(--color-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .2em; }
+.publisher-content ol { list-style: decimal; padding-left: 1.4rem; }
+.publisher-content li + li { margin-top: .7rem; }
+.skill-list > div { margin-top: 1rem; border-left: 2px solid var(--color-line); padding-left: 1rem; }
+.skill-list dt { font-weight: 700; }
+.skill-list dd { color: #b6bfd0; }
+.disclosure { padding: 1rem; background: var(--color-panel); border-left: 3px solid var(--color-gold); margin-top: 1.5rem; }
+.mode-heading { font-family: var(--font-display); font-size: 1.5rem; color: var(--color-gold); text-transform: uppercase; margin: .5rem 0 1rem; }
+.skip-link { position: fixed; top: .5rem; left: .5rem; transform: translateY(-200%); z-index: 100; padding: .75rem; background: var(--color-gold); color: var(--color-ink); }
+.skip-link:focus { transform: translateY(0); }

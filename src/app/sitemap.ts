@@ -1,13 +1,5 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/config/site";
-
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    { url: SITE_URL, changeFrequency: "weekly", priority: 1 },
-    { url: `${SITE_URL}/daily`, changeFrequency: "daily", priority: 0.9 },
-    { url: `${SITE_URL}/play`, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${SITE_URL}/budget`, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/h2h`, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.4 },
-  ];
+  return ["", "/daily", "/play", "/budget", "/h2h", "/how-to-play", "/scoring", "/modes", "/about", "/privacy", "/terms", "/contact"].map(path => ({ url: `${SITE_URL}${path}` }));
 }

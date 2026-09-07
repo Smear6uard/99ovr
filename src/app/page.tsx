@@ -1,5 +1,8 @@
+import { HomeGuide } from "@/components/HomeGuide";
+import { PublisherAds } from "@/components/PublisherAds";
+import { SITE_URL } from "@/config/site";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/SiteLink";
 import { DailyCard } from "@/components/DailyCard";
 import { Wordmark } from "@/components/Wordmark";
 
@@ -63,6 +66,12 @@ function ModeCard({
 export default function Home() {
   return (
     <div className="pb-4">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org", "@type": "WebSite", name: "99OVR", url: SITE_URL,
+        description: "A browser basketball game built around six skill selections and a ten-boss gauntlet.",
+        publisher: { "@type": "Organization", name: "Sameer Studios LLC", email: "sameer@sameerstuidos.com" },
+      }) }} />
+      <PublisherAds />
       {/* ---------- HERO ---------- */}
       <section className="relative pb-2 pt-6 text-center">
         {/* local court-arc accent — echoes the global dashed 3pt arc, does not repeat the full court */}
@@ -145,6 +154,7 @@ export default function Home() {
           <Step word="Answer" gloss="for the pick" />
         </div>
       </section>
+      <HomeGuide />
     </div>
   );
 }

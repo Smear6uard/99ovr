@@ -1,12 +1,10 @@
 "use client";
 
 import type { Rung, RungResult } from "@/lib/types";
-import { AdSlot } from "@/components/AdSlot";
 
 /** Round-by-round story. Reads like a box score with a narrator. Shared by both games. */
 export function GauntletLog({
   result,
-  refreshKey,
 }: {
   result: { rungs: RungResult[]; gauntlet: Rung[]; fellAt: number | null };
   refreshKey?: number;
@@ -17,11 +15,10 @@ export function GauntletLog({
       <h2 className="font-display text-lg uppercase tracking-wide text-paper">The Gauntlet</h2>
       <p className="mt-1 text-[11px] text-dim">Beat 10 legends 1v1. Lose once and it&apos;s over.</p>
       <ol className="mt-2 space-y-0">
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const opp = result.gauntlet[r.rung - 1];
           return (
             <li key={r.rung}>
-              {i === 5 ? <AdSlot id="gauntlet-log" refreshKey={refreshKey} /> : null}
               <div className="flex gap-3 border-b border-line/60 py-2.5">
                 <span className="w-6 shrink-0 pt-0.5 text-right font-display text-lg text-dim">{r.rung}</span>
                 <div className="min-w-0 flex-1">

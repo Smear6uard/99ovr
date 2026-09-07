@@ -14,13 +14,14 @@ function load(code: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
   const result = load(code);
-  if (!result) return { title: "Challenge not found" };
+  if (!result) return { title: "Challenge not found", robots: { index: false, follow: true } };
   const og = `/api/og?b=${encodeURIComponent(code)}&v=h2h`;
   const title = `CAN YOU BEAT ${result.derived.ovr} OVR?`;
   const description = `A friend put up ${result.derived.ovr} OVR on this wheel and thinks you can't. Same spins, same rosters, one winner.`;
   return {
     title,
     description,
+    robots: { index: false, follow: true },
     alternates: { canonical: `/h2h/${code}` },
     openGraph: { title: `${title} — 99OVR`, description, images: [og], type: "website" },
     twitter: { card: "summary_large_image", title: `${title} — 99OVR`, description, images: [og] },
@@ -30,5 +31,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function H2HChallengePage({ params }: Props) {
   const { code } = await params;
   if (!load(code)) notFound();
-  return <H2HGame code={code} />;
+  return <><h1 className="mode-heading">Head-to-Head challenge</h1><H2HGame code={code} /></>;
 }

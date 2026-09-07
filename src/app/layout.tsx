@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Anton, Inter } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
-import { ADS_ENABLED, ADSENSE_CLIENT, GA4_ID } from "@/config/ads";
+import { ADSENSE_CLIENT, GA4_ID } from "@/config/ads";
 import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/config/site";
 import { CourtLines } from "@/components/CourtLines";
 import { Header } from "@/components/Header";
@@ -54,21 +54,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${anton.variable} ${inter.variable}`}>
       <body className="min-h-dvh">
+        <a className="skip-link" href="#main-content">Skip to content</a>
         <CourtLines />
         <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-4">
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">{children}</main>
           <Footer />
         </div>
         <Analytics />
-        {ADS_ENABLED && ADSENSE_CLIENT ? (
-          <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        ) : null}
         {GA4_ID ? (
           <>
             <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />

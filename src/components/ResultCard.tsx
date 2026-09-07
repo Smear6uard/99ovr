@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { usePrefersReducedMotion } from "@/lib/hooks";
 import { TIER_HEX, TIER_NAMES, tierFor, tierForPrice } from "@/lib/tiers";
-import { POSITION_LABELS, SLOT_LABELS, type SimResult } from "@/lib/types";
+import { POSITION_LABELS, type SimResult } from "@/lib/types";
 import { Odometer } from "@/components/Odometer";
 import { RungSquares } from "@/components/RungSquares";
 

@@ -55,7 +55,7 @@ export function cleanInitials(raw: unknown): string | null {
 /**
  * Sorted-set member: initials plus an ip/code fingerprint, so a resubmission
  * of the same run from the same place updates in place instead of stacking.
- * No PII stored — the fingerprint is a one-way 32-bit hash.
+ * The fingerprint is a short hash, not an anonymization guarantee. Rate-limit keys separately contain the IP.
  */
 export function lbMember(initials: string, ip: string, code: string): string {
   return `${initials}#${(fnv1a(`${ip}|${code}`) >>> 0).toString(36)}`;

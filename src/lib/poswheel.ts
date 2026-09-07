@@ -1,5 +1,5 @@
 import { decadeTag } from "@/data/eras/authoring";
-import { POSITION_POOLS, POS_DECADES } from "@/data/positions";
+import { POSITION_POOLS } from "@/data/positions";
 import { fnv1a, mulberry32, shuffle, type Rng } from "@/lib/rng";
 import {
   POSITION_LABELS,

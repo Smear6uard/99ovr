@@ -143,7 +143,7 @@ export function DailyShell() {
     <div>
       <div className="flex items-end justify-between pb-4 pt-1">
         <div>
-          <h1 className="font-display text-[27px] uppercase leading-none">Daily #{today.number}</h1>
+          <h2 className="font-display text-[27px] uppercase leading-none">Daily #{today.number}</h2>
           <p className="mt-1 text-[12px] text-dim">Everyone on Earth gets this wheel.</p>
         </div>
         <div className="text-right text-[11px] font-bold tracking-[0.14em]">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/SiteLink";
 import { notFound } from "next/navigation";
 import { decodeAny } from "@/lib/encode";
 import { simulate } from "@/lib/sim";
@@ -25,7 +25,7 @@ function load(code: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
   const loaded = load(code);
-  if (!loaded) return { title: "Build not found" };
+  if (!loaded) return { title: "Build not found", robots: { index: false, follow: true } };
 
   const { result } = loaded;
   const { derived, archetype, fellAt } = result;
@@ -47,6 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    robots: { index: false, follow: true },
     alternates: { canonical: `/b/${code}` },
     openGraph: { title: `${title} — 99OVR`, description, images: [og], type: "website" },
     twitter: { card: "summary_large_image", title: `${title} — 99OVR`, description, images: [og] },

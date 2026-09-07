@@ -148,9 +148,9 @@ export function StealRound({
         <span className="text-[10px] font-bold tracking-[0.3em] text-gold/80">
           ROUND {round + 1} / {ROUNDS} · {ATTR_LABELS[attr].toUpperCase()}
         </span>
-        <h1 className="mt-1 font-display text-[38px] uppercase leading-none text-paper">
+        <h2 className="mt-1 font-display text-[38px] uppercase leading-none text-paper">
           {reel === "landed" ? "Steal one" : reel === "spinning" ? "Spinning…" : positional ? "Spin the decade" : "Spin team + decade"}
-        </h1>
+        </h2>
       </div>
 
       {reel === "landed" ? (

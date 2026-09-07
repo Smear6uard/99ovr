@@ -17,7 +17,6 @@ import { maybeRecordBest } from "@/lib/storage";
 import { TIER_HEX, tierFor } from "@/lib/tiers";
 import { DECADE_POOL, ROUNDS, V4_TOKENS, bucketIndexAt, canRespin, respinBucketIndex, totalRespinsLeft, type SpinsUsed } from "@/lib/wheel";
 import { ATTR_LABELS, type PositionMode, type StealBuild, type StealMode, type StealResult } from "@/lib/types";
-import { AdSlot } from "@/components/AdSlot";
 import { FlawSpin } from "@/components/FlawSpin";
 import { GauntletLog } from "@/components/GauntletLog";
 import { H2HCompare } from "@/components/H2HCompare";
@@ -354,7 +353,6 @@ export function StealFlow({
             onRespin={handleRespin}
             onSteal={handleSteal}
           />
-          <AdSlot id="shop-footer" />
         </>
       ) : null}
 
@@ -425,7 +423,6 @@ export function StealFlow({
 
           {challenge ? <GauntletAccordion result={result} refreshKey={attempt} /> : null}
 
-          <AdSlot id="result-primary" refreshKey={attempt} />
         </div>
       ) : null}
 

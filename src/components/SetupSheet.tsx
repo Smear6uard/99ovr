@@ -28,11 +28,11 @@ export function SetupSheet({
         <span className="block text-[10px] font-bold tracking-[0.3em] text-gold/80">
           {modeName.toUpperCase()} · SET UP YOUR RUN
         </span>
-        <h1 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
+        <h2 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
           Two calls,
           <br />
           then we spin
-        </h1>
+        </h2>
         <p className="mx-auto mt-2 max-w-[21rem] text-[13px] leading-snug text-dim">{modeBlurb}</p>
       </div>
 

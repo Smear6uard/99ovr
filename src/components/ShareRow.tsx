@@ -38,7 +38,7 @@ export function ShareRow({
           const ok = await nativeShare(summary, text, code);
           if (!ok) flash("share", "Canceled");
         } else {
-          (await copyText(text)) ? flash("share", "Copied") : flash("share", "Blocked");
+          flash("share", (await copyText(text)) ? "Copied" : "Blocked");
         }
       },
     },
@@ -46,14 +46,14 @@ export function ShareRow({
       key: "link",
       label: "Copy link",
       run: async () => {
-        (await copyText(buildUrl(code))) ? flash("link", "Copied") : flash("link", "Blocked");
+        flash("link", (await copyText(buildUrl(code))) ? "Copied" : "Blocked");
       },
     },
     {
       key: "result",
       label: dailyBlock ? "Copy daily result" : "Copy result",
       run: async () => {
-        (await copyText(dailyBlock ?? text)) ? flash("result", "Copied") : flash("result", "Blocked");
+        flash("result", (await copyText(dailyBlock ?? text)) ? "Copied" : "Blocked");
       },
     },
     {

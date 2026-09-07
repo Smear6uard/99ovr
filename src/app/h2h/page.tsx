@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/SiteLink";
 
 export const metadata: Metadata = {
   title: "Head to Head",
   description:
     "Finish a Classic run, mint a challenge link, and make a friend play the identical spins. Side-by-side verdict, one winner, one roast.",
   alternates: { canonical: "/h2h" },
-  openGraph: { images: ["/api/og?v=h2h"] },
-  twitter: { card: "summary_large_image", images: ["/api/og?v=h2h"] },
+  openGraph: { title: "Head to Head · 99OVR", description: "Challenge a friend to the same starting wheel and compare your builds.", url: "/h2h", images: ["/api/og?v=h2h"] },
+  twitter: { title: "Head to Head · 99OVR", description: "Same starting wheel. Compare your builds.", card: "summary_large_image", images: ["/api/og?v=h2h"] },
 };
 
 export default function H2HPage() {
@@ -47,7 +47,7 @@ export default function H2HPage() {
         >
           Start a Classic run
         </Link>
-        <p className="mt-2 text-[11px] text-dim">No accounts, no sync — the build code carries everything.</p>
+        <p className="mt-2 text-[11px] text-dim">Higher OVR wins; grade points break ties. Equal OVR and points means a draw. No accounts — the build code carries the challenge.</p>
       </div>
     </div>
   );

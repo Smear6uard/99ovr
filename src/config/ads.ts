@@ -1,6 +1,7 @@
 /**
- * Monetization config. Flip ADS_ENABLED and paste your AdSense client ID
- * to go live — slot heights are reserved either way, so CLS stays 0.
+ * Publisher integration for substantive landing/guide pages only.
+ * Gameplay has no manual ad placements. Dashboard Auto Ads exclusions and
+ * regional consent configuration still need to be managed in AdSense.
  */
 export const ADS_ENABLED = true;
 

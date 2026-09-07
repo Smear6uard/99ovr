@@ -10,8 +10,8 @@ declare global {
 }
 
 /**
- * Fixed-height ad container — the height is reserved whether or not ads are
- * enabled, so layout never shifts. `refreshKey` remounts the unit on re-sims.
+ * Reserved space only for a configured unit. Currently not mounted anywhere;
+ * any future placement must stay outside gameplay, errors and shared results.
  */
 export function AdSlot({ id, refreshKey = 0 }: { id: AdSlotId; refreshKey?: number | string }) {
   const slot = AD_SLOTS[id];
@@ -23,7 +23,9 @@ export function AdSlot({ id, refreshKey = 0 }: { id: AdSlotId; refreshKey?: numb
     } catch {
       // ad blocker or script not loaded — the reserved box just stays empty
     }
-  }, [refreshKey]);
+  }, [refreshKey, slot.adUnit]);
+
+  if (!ADS_ENABLED || !ADSENSE_CLIENT || !slot.adUnit) return null;
 
   return (
     <div

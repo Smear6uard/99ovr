@@ -144,7 +144,7 @@ export function FlawSpin({
         <span className="block text-[10px] font-bold tracking-[0.3em] text-loss/80">
           {economy === "budget" ? "MID-RUN BREAK · THE WEAKNESS WHEEL" : "STEP 1 · PICK YOUR POISON"}
         </span>
-        <h1 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
+        <h2 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
           {reel === "landed" ? (
             "Pick one"
           ) : (
@@ -154,7 +154,7 @@ export function FlawSpin({
               has one
             </>
           )}
-        </h1>
+        </h2>
         {economy === "budget" && reel !== "landed" ? (
           <p className="mx-auto mt-2 max-w-[19rem] text-[12px] leading-snug text-dim">
             Three steals down, three to go. Take a weakness — the worse it is, the more budget it refunds for the
