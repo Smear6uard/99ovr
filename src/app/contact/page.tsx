@@ -7,7 +7,13 @@ export const metadata = pageMetadata(
 );
 export default function Contact() {
   return (
-    <Article title="Contact" intro="99OVR is published by Sameer Studios LLC.">
+    <Article
+      title="Contact"
+      intro="99OVR is published by Sameer Studios LLC."
+      eyebrow="Studio"
+      byline={false}
+      related={[{ href: "/about", title: "About 99OVR" }]}
+    >
       <Section title="Talk to the publisher">
         <p>
           Email{" "}

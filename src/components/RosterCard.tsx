@@ -92,7 +92,7 @@ export function RosterCard({
                   )}
                 </span>
                 <span className="hidden max-w-[42%] shrink-0 truncate text-right text-[10px] leading-tight text-dim/80 sm:block">
-                  {taken ? "ALREADY STOLEN" : broke ? "CAN'T AFFORD" : player.note}
+                  {taken ? "ALREADY STOLEN" : broke ? "CAN'T AFFORD" : knowledge ? null : player.note}
                 </span>
                 <span aria-hidden className="shrink-0 font-display text-lg leading-none text-gold/70">
                   {taken ? "×" : broke ? "$" : "+"}

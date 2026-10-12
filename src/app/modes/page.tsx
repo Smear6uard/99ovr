@@ -1,6 +1,5 @@
 import Link from "@/components/SiteLink";
 import { Article, Section } from "@/components/PublisherContent";
-import { PublisherAds } from "@/components/PublisherAds";
 import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Choose Your 99OVR Mode",
@@ -13,7 +12,58 @@ export default function Modes() {
       <Article
         title="Choose your mode"
         intro="Four ways to ask the same basketball question: which six skills would you trust against ten bosses?"
+        related={[
+          { href: "/how-to-play", title: "How to play" },
+          { href: "/guides/budget-strategy", title: "Budget strategy" },
+          { href: "/guides/positional-builds", title: "Positional builds" },
+        ]}
       >
+        <div className="table-wrap mt-6">
+          <table>
+            <thead>
+              <tr>
+                <th>Mode</th>
+                <th>Who sets it up</th>
+                <th>Wallet &amp; flaw</th>
+                <th>Best for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Daily</strong>
+                </td>
+                <td>The UTC date: same wheel and target for everyone</td>
+                <td>None</td>
+                <td>One official run a day, a streak and the daily board</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Classic</strong>
+                </td>
+                <td>You: clue level and build target</td>
+                <td>None</td>
+                <td>Learning, experimenting and minting challenges</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Budget</strong>
+                </td>
+                <td>You: clue level and build target</td>
+                <td>$15 of game money and a weakness-wheel flaw</td>
+                <td>Players who know the rosters and want a resource puzzle</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Head to Head</strong>
+                </td>
+                <td>Your friend&rsquo;s Classic run</td>
+                <td>None</td>
+                <td>Settling one argument with one friend</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <Section title="Daily — a shared starting point">
           <p>
             Choose Daily when you want a result to compare today. The UTC date
@@ -60,7 +110,6 @@ export default function Modes() {
           <Link href="/h2h">Start a duel →</Link>
         </Section>
       </Article>
-      <PublisherAds />
     </>
   );
 }

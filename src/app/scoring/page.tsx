@@ -1,4 +1,6 @@
-import { Article, Section, Skills } from "@/components/PublisherContent";
+import { Article, Section } from "@/components/PublisherContent";
+import Link from "@/components/SiteLink";
+import { RATING_TIERS } from "@/config/ratingTiers";
 import { PublisherAds } from "@/components/PublisherAds";
 import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
@@ -12,6 +14,11 @@ export default function Scoring() {
       <Article
         title="Ratings & scoring"
         intro="The grade is the decision. The OVR is the outcome. Those are deliberately different measures."
+        related={[
+          { href: "/guides/skills", title: "The six skills, explained" },
+          { href: "/guides/boss-gauntlet", title: "The boss gauntlet" },
+          { href: "/guides/positional-builds", title: "Positional builds" },
+        ]}
       >
         <p className="disclosure">
           <strong>
@@ -27,9 +34,9 @@ export default function Scoring() {
             skills. A steal takes the value for the current attribute only.
             Box-stat clues help identify a player’s role; they do not directly
             calculate the pick’s rating. A player’s reputation as a scorer
-            cannot answer every round.
+            cannot answer every round. What each of the six skills measures, and how they lean on each other, is
+            covered in <Link href="/guides/skills">the skills guide</Link>.
           </p>
-          <Skills />
         </Section>
         <Section title="How a pick earns its grade">
           <p>
@@ -82,6 +89,38 @@ export default function Scoring() {
             builds may use earlier rules.
           </p>
         </Section>
+        <Section title="Rating tiers">
+          <p>
+            Your OVR lands in one of seven tiers on the result card. The bands are fixed, so a tier means the same
+            thing in every mode.
+          </p>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tier</th>
+                  <th>OVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {RATING_TIERS.map((tier) => (
+                  <tr key={tier.id}>
+                    <td style={{ color: tier.color }} className="font-semibold">
+                      {tier.name}
+                    </td>
+                    <td>
+                      {Math.max(tier.min, 40)}&ndash;{Math.min(tier.max, 97)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>
+            GOAT is real but rare: the tier starts at 96 and the six-steal ceiling is 97, so it is a two-number
+            window. At the other end, the formula never reports less than 40.
+          </p>
+        </Section>
         <Section title="A position changes what matters">
           <p>
             Point guards emphasize creation and playmaking. Shooting guards lean
@@ -89,7 +128,9 @@ export default function Scoring() {
             Power forwards and centers put more weight on rim pressure and
             defense. The position also changes the roster pool and boss ladder,
             so a center challenge is a different draft problem, not just a new
-            label on the result.
+            label on the result. The{" "}
+            <Link href="/guides/positional-builds">positional builds guide</Link>{" "}
+            breaks down each position&rsquo;s weights.
           </p>
         </Section>
         <Section title="OVR is not a guaranteed boss result">

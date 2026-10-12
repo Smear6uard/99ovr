@@ -5,23 +5,11 @@ import { encodeSteal } from "@/lib/encode";
 import { DECADE_POOL, bucketIndexAt } from "@/lib/wheel";
 import { simulateSteals } from "@/lib/steal";
 import type { StealBuild } from "@/lib/types";
+import { AD_PATHS, PUBLIC_PATHS } from "@/content/library";
 
 const base = process.env.CONTENT_TEST_BASE_URL;
-const paths = [
-  "/",
-  "/about",
-  "/how-to-play",
-  "/scoring",
-  "/modes",
-  "/daily",
-  "/play",
-  "/budget",
-  "/h2h",
-  "/privacy",
-  "/terms",
-  "/contact",
-];
-const adPages = new Set(["/", "/about", "/how-to-play", "/scoring", "/modes"]);
+const paths = PUBLIC_PATHS.map((path) => path || "/");
+const adPages = new Set(AD_PATHS);
 const pages = new Map<string, Document>();
 
 describe.skipIf(!base)("production HTML without JavaScript", () => {
@@ -58,7 +46,17 @@ describe.skipIf(!base)("production HTML without JavaScript", () => {
       expect(
         doc.querySelector('meta[name="robots"][content*="noindex"]'),
       ).toBeNull();
-      if (!adPages.has(path))
+      if (adPages.has(path)) {
+        // Ads only ever sit beside substantial original writing.
+        expect(doc.documentElement.outerHTML).toContain(
+          "pagead2.googlesyndication.com",
+        );
+        const words = doc
+          .querySelector("main")!
+          .textContent!.split(/\s+/)
+          .filter(Boolean).length;
+        expect(words, path).toBeGreaterThan(700);
+      } else
         expect(doc.documentElement.outerHTML).not.toContain(
           "pagead2.googlesyndication.com",
         );

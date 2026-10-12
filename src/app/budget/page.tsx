@@ -1,4 +1,5 @@
 import { ModeGuide } from "@/components/ModeGuide";
+import { GameColumn } from "@/components/GameColumn";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { BudgetSteals } from "@/components/BudgetSteals";
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function BudgetPage() {
   return (
-    <>
+    <GameColumn>
       <noscript>
         <p className="mb-4 text-sm text-paper">
           Enable JavaScript to play the interactive game. The guide below is
@@ -36,6 +37,6 @@ export default function BudgetPage() {
         <BudgetSteals />
       </Suspense>
       <ModeGuide mode="budget" />
-    </>
+    </GameColumn>
   );
 }

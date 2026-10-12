@@ -1,4 +1,5 @@
 import { ModeGuide } from "@/components/ModeGuide";
+import { GameColumn } from "@/components/GameColumn";
 import type { Metadata } from "next";
 import { DailyShell } from "@/components/DailyShell";
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function DailyPage() {
   return (
-    <>
+    <GameColumn>
       <noscript>
         <p className="mb-4 text-sm text-paper">
           Enable JavaScript to play the interactive game. The guide below is
@@ -34,6 +35,6 @@ export default function DailyPage() {
       <h1 className="mode-heading">Daily Challenge</h1>
       <DailyShell />
       <ModeGuide mode="daily" />
-    </>
+    </GameColumn>
   );
 }

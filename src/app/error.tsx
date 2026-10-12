@@ -2,7 +2,7 @@
 import Link from "@/components/SiteLink";
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
-    <section className="publisher-content py-8">
+    <section className="publisher-content mx-auto max-w-2xl py-8">
       <h1>That page could not load</h1>
       <p>Try again or return to the game launcher.</p>
       <button

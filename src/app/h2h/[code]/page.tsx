@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { decodeSteal } from "@/lib/encode";
 import { simulateSteals } from "@/lib/steal";
 import { H2HGame } from "@/components/H2HGame";
+import { GameColumn } from "@/components/GameColumn";
 
 type Props = { params: Promise<{ code: string }> };
 
@@ -31,5 +32,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function H2HChallengePage({ params }: Props) {
   const { code } = await params;
   if (!load(code)) notFound();
-  return <><h1 className="mode-heading">Head-to-Head challenge</h1><H2HGame code={code} /></>;
+  return (
+    <GameColumn>
+      <h1 className="mode-heading">Head-to-Head challenge</h1>
+      <H2HGame code={code} />
+    </GameColumn>
+  );
 }

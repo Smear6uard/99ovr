@@ -10,6 +10,8 @@ export default function Privacy() {
   return (
     <Article
       title="Privacy policy"
+      eyebrow="Legal"
+      byline={false}
       intro="Sameer Studios LLC publishes 99OVR. This policy describes the game’s data handling and the outside services used to operate it. Updated September 6, 2026."
     >
       <Section title="Playing and browser storage">

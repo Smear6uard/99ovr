@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/components/SiteLink";
+import { GameColumn } from "@/components/GameColumn";
 
 export const metadata: Metadata = {
   title: "Head to Head",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function H2HPage() {
   return (
-    <div className="flex min-h-[64vh] flex-col pt-2 text-center">
+    <GameColumn className="flex min-h-[64vh] flex-col pt-2 text-center">
       <span className="block text-[10px] font-bold tracking-[0.3em] text-gold/80">HEAD TO HEAD</span>
       <h1 className="mt-1 font-display text-4xl uppercase leading-[0.92] text-paper">
         Same wheel.
@@ -49,6 +50,6 @@ export default function H2HPage() {
         </Link>
         <p className="mt-2 text-[11px] text-dim">Higher OVR wins; grade points break ties. Equal OVR and points means a draw. No accounts — the build code carries the challenge.</p>
       </div>
-    </div>
+    </GameColumn>
   );
 }

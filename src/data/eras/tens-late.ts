@@ -122,7 +122,7 @@ export const TENS_LATE = [
     p("Thanasis Antetokounmpo", "2.5 PPG · 1.5 RPG · 0.6 APG", "The other one. Loudest man on any bench.", [32, 44, 58, 34, 68, 88]),
   ]),
 
-  era("nuggets-23", "nuggets", "NUGGETS", "2023", "iconic", "Jokic averaged a triple-double in the Finals. Denver's first.", [
+  era("nuggets-23", "nuggets", "NUGGETS", "2023", "iconic", "Jokic, Finals MVP, and Denver's first banner. Sixteen playoff wins, four losses.", [
     p("Nikola Jokic", "24.5 PPG · 11.8 RPG · 9.8 APG", "Finals MVP. Best passing big man who has ever lived.", [82, 78, 90, 99, 72, 58]),
     p("Jamal Murray", "20.0 PPG · 4.0 RPG · 6.2 APG", "Playoff Jamal is a completely different player", [84, 86, 82, 76, 62, 78]),
     p("Michael Porter Jr.", "17.4 PPG · 5.5 RPG · 1.0 APG", "Three back surgeries and the prettiest jumper on the team", [86, 56, 70, 34, 58, 80]),

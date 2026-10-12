@@ -7,6 +7,7 @@ import { simulateSteals } from "@/lib/steal";
 import { GauntletLog } from "@/components/GauntletLog";
 import { ResultCard } from "@/components/ResultCard";
 import { StealCard } from "@/components/StealCard";
+import { GameColumn } from "@/components/GameColumn";
 
 type Props = { params: Promise<{ code: string }> };
 
@@ -72,7 +73,7 @@ export default async function BuildPage({ params }: Props) {
     : "BUDGET BALL (LEGACY)";
 
   return (
-    <div className="pt-1">
+    <GameColumn className="pt-1">
       {steal ? (
         <StealCard result={loaded.result} modeChip={chip} />
       ) : (
@@ -99,6 +100,6 @@ export default async function BuildPage({ params }: Props) {
       >
         Start your own run
       </Link>
-    </div>
+    </GameColumn>
   );
 }

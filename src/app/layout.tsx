@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <a className="skip-link" href="#main-content">Skip to content</a>
         <CourtLines />
-        <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-4">
+        <div className="relative mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4">
           <Header />
           <main id="main-content" className="flex-1">{children}</main>
           <Footer />

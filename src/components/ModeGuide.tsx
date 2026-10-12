@@ -86,7 +86,7 @@ export function ModeGuide({ mode }: { mode: "daily" | "classic" | "budget" }) {
           </Section>
           <Section title="The weakness wheel changes your plan">
             <p>
-              After the first three steals, take a flaw. Mild refunds $1; Bad
+              After the first three steals, pick one of three flaws. Mild refunds $1; Bad
               refunds $2; Brutal and Career-Threatening refund $3. The money
               arrives for the last three steals. The flaw stays for the
               gauntlet, where its effects can hurt matchups or introduce injury
@@ -105,9 +105,18 @@ export function ModeGuide({ mode }: { mode: "daily" | "classic" | "budget" }) {
         </>
       )}
       <p>
-        <Link href="/how-to-play">Read the full guide</Link> ·{" "}
-        <Link href="/scoring">Understand scoring</Link> ·{" "}
-        <Link href="/modes">Compare modes</Link>
+        {mode === "budget" ? (
+          <>
+            <Link href="/guides/budget-strategy">Budget strategy</Link> ·{" "}
+            <Link href="/guides/weakness-wheel">Every flaw, explained</Link> ·{" "}
+          </>
+        ) : (
+          <>
+            <Link href="/guides/reading-rosters">How to read a roster</Link> ·{" "}
+            <Link href="/guides/positional-builds">Positional builds</Link> ·{" "}
+          </>
+        )}
+        <Link href="/how-to-play">Full rules</Link> · <Link href="/guides">All guides</Link>
       </p>
     </aside>
   );

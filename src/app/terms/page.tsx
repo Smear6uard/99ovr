@@ -9,6 +9,8 @@ export default function Terms() {
   return (
     <Article
       title="Terms of use"
+      eyebrow="Legal"
+      byline={false}
       intro="99OVR is published by Sameer Studios LLC for entertainment. By using the service, you agree to these terms. Updated September 6, 2026."
     >
       <Section title="A fan-made basketball game">

@@ -1,4 +1,5 @@
 import { HomeGuide } from "@/components/HomeGuide";
+import { GameColumn } from "@/components/GameColumn";
 import { PublisherAds } from "@/components/PublisherAds";
 import { SITE_URL } from "@/config/site";
 import type { Metadata } from "next";
@@ -72,88 +73,90 @@ export default function Home() {
         publisher: { "@type": "Organization", name: "Sameer Studios LLC", email: "sameer@sameerstudios.com" },
       }) }} />
       <PublisherAds />
-      {/* ---------- HERO ---------- */}
-      <section className="relative pb-2 pt-6 text-center">
-        {/* local court-arc accent — echoes the global dashed 3pt arc, does not repeat the full court */}
-        <svg
-          aria-hidden
-          viewBox="0 0 400 200"
-          fill="none"
-          className="pointer-events-none absolute inset-x-0 top-9 -z-0 mx-auto h-40 w-full"
-        >
-          <path
-            d="M 30 190 A 175 175 0 0 1 370 190"
-            stroke="#f2b94b"
-            strokeWidth="1.5"
-            strokeDasharray="3 8"
-            className="opacity-25"
-          />
-          <path d="M 30 190 A 175 175 0 0 1 370 190" stroke="#26314b" strokeWidth="1.5" opacity="0.5" />
-        </svg>
-
-        <div className="relative z-10">
-          <p className="fade-up text-[11px] font-bold uppercase tracking-[0.34em] text-dim">
-            Nobody hits <span className="text-gold">99</span>
-          </p>
-
-          <h1 className="fade-up mt-3 flex justify-center" style={{ animationDelay: "60ms" }}>
-            <Wordmark className="text-[82px] leading-[0.82] sm:text-8xl" />
-          </h1>
-
-          <p
-            className="fade-up mx-auto mt-4 max-w-[20rem] text-[15px] leading-relaxed text-dim"
-            style={{ animationDelay: "120ms" }}
+      <GameColumn>
+        {/* ---------- HERO ---------- */}
+        <section className="relative pb-2 pt-6 text-center">
+          {/* local court-arc accent — echoes the global dashed 3pt arc, does not repeat the full court */}
+          <svg
+            aria-hidden
+            viewBox="0 0 400 200"
+            fill="none"
+            className="pointer-events-none absolute inset-x-0 top-9 -z-0 mx-auto h-40 w-full"
           >
-            Six spins. Six real rosters. Steal one skill from each.{" "}
-            <span className="font-semibold text-paper">Then ten bosses find out what you built.</span>
-          </p>
-        </div>
-      </section>
+            <path
+              d="M 30 190 A 175 175 0 0 1 370 190"
+              stroke="#f2b94b"
+              strokeWidth="1.5"
+              strokeDasharray="3 8"
+              className="opacity-25"
+            />
+            <path d="M 30 190 A 175 175 0 0 1 370 190" stroke="#26314b" strokeWidth="1.5" opacity="0.5" />
+          </svg>
 
-      {/* ---------- MODE CARDS: DAILY · CLASSIC · BUDGET · HEAD TO HEAD ---------- */}
-      <section
-        className="fade-up mt-7 flex flex-col gap-3"
-        style={{ animationDelay: "180ms" }}
-        aria-label="Game modes"
-      >
-        <DailyCard />
+          <div className="relative z-10">
+            <p className="fade-up text-[11px] font-bold uppercase tracking-[0.34em] text-dim">
+              Nobody hits <span className="text-gold">99</span>
+            </p>
 
-        <ModeCard
-          href="/play"
-          kicker="Classic"
-          title="Classic"
-          blurb="The pure knowledge test. Pick your target — best player or a positional crown — and read six rosters."
-          primary
-        />
+            <h1 className="fade-up mt-3 flex justify-center" style={{ animationDelay: "60ms" }}>
+              <Wordmark className="text-[82px] leading-[0.82] sm:text-8xl" />
+            </h1>
 
-        <ModeCard
-          href="/budget"
-          kicker="Budget"
-          kickerAccent="$15 · Weakness Wheel"
-          title="Budget"
-          blurb="Every skill has a price and you have $15. Halfway in, the weakness wheel pays you to take a flaw."
-        />
+            <p
+              className="fade-up mx-auto mt-4 max-w-[20rem] text-[15px] leading-relaxed text-dim"
+              style={{ animationDelay: "120ms" }}
+            >
+              Six spins. Six real rosters. Steal one skill from each.{" "}
+              <span className="font-semibold text-paper">Then ten bosses find out what you built.</span>
+            </p>
+          </div>
+        </section>
 
-        <ModeCard
-          href="/h2h"
-          kicker="Head to Head"
-          kickerAccent="Winner takes the roast"
-          title="Head to Head"
-          blurb="Mint a challenge from any Classic run. A friend plays your exact spins — side-by-side verdict decides it."
-        />
-      </section>
+        {/* ---------- MODE CARDS: DAILY · CLASSIC · BUDGET · HEAD TO HEAD ---------- */}
+        <section
+          className="fade-up mt-7 flex flex-col gap-3"
+          style={{ animationDelay: "180ms" }}
+          aria-label="Game modes"
+        >
+          <DailyCard />
 
-      {/* ---------- HOW IT WORKS ---------- */}
-      <section className="mt-10" aria-label="How it works">
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-dim">How it works</p>
-        <div className="mt-4 flex items-start justify-center gap-3 text-center">
-          <Step word="Gamble" gloss="spin the era" />
-          <Sep />
-          <Step word="Know" gloss="read the roster" />
-          <Sep />
-          <Step word="Answer" gloss="for the pick" />
-        </div>
-      </section>
+          <ModeCard
+            href="/play"
+            kicker="Classic"
+            title="Classic"
+            blurb="The pure knowledge test. Pick your target — best player or a positional crown — and read six rosters."
+            primary
+          />
+
+          <ModeCard
+            href="/budget"
+            kicker="Budget"
+            kickerAccent="$15 · Weakness Wheel"
+            title="Budget"
+            blurb="Every skill has a price and you have $15. Halfway in, the weakness wheel pays you to take a flaw."
+          />
+
+          <ModeCard
+            href="/h2h"
+            kicker="Head to Head"
+            kickerAccent="Winner takes the roast"
+            title="Head to Head"
+            blurb="Mint a challenge from any Classic run. A friend plays your exact spins — side-by-side verdict decides it."
+          />
+        </section>
+
+        {/* ---------- HOW IT WORKS ---------- */}
+        <section className="mt-10" aria-label="How it works">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-dim">How it works</p>
+          <div className="mt-4 flex items-start justify-center gap-3 text-center">
+            <Step word="Gamble" gloss="spin the era" />
+            <Sep />
+            <Step word="Know" gloss="read the roster" />
+            <Sep />
+            <Step word="Answer" gloss="for the pick" />
+          </div>
+        </section>
+      </GameColumn>
       <HomeGuide />
     </div>
   );

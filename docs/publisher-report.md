@@ -114,3 +114,49 @@ Existing ads.txt matches `pub-9476228948751191`. Before deployment, www ads.txt 
 - `src/lib/poswheel.ts`
 - `src/lib/storage.ts`
 - `src/middleware.ts`
+
+## October 2026 — "Low value content" remediation
+
+AdSense returned the standard *Low value content* rejection, citing
+[content & user experience](https://support.google.com/adsense/answer/10015918),
+[thin content](https://support.google.com/webmasters/answer/9044175#thin-content) and the
+[publisher spam policy](https://support.google.com/publisherpolicies/answer/11035931).
+Before this pass the five ad-eligible pages carried roughly 3,000 words between them, and much of it
+repeated the same mode/rules explanation on Home, About, How to play, Modes and Scoring.
+
+### Added — an original field guide (all statically rendered, all hand-written)
+- `/guides` index and `/decades` index (navigation hubs, no ad loader).
+- Strategy: `/guides/skills`, `/guides/reading-rosters`, `/guides/budget-strategy`, `/guides/positional-builds`.
+- Reference: `/guides/boss-gauntlet`, `/guides/weakness-wheel`, `/franchises`.
+- Seven decade guides, `/decades/1960s` … `/decades/2020s`: an essay on how the decade played and what it
+  means for each skill, decade-specific drafting advice, players worth knowing, the franchise landings for that
+  decade, and the complete positional pool (name, box-score clue and hand-written note only — hidden ratings
+  are never published).
+- Every mechanic and number in the guides was checked against the engine; odds, price bands, weights and
+  flaw tables render from the game code so they cannot drift.
+
+### Removed duplication
+- About now covers who makes the game, how ratings are made and corrected, and the FAQ — no longer a
+  re-statement of the rules, modes, gauntlet list and tiers.
+- The six-skill definition list that appeared on both How to play and Scoring was replaced by links to the
+  skills guide; rating tiers moved to Scoring.
+- Home keeps a short introduction and links into the library instead of repeating rules and FAQ answers.
+
+### UX
+- Editorial pages use a 42rem reading column; game screens keep the phone-width cabinet column.
+- Header gains a Guides link; the footer is grouped into Play / Learn / Reference / 99OVR.
+- Legal and contact pages drop the editorial byline.
+
+### Accuracy fixes found during review
+- 2023 Nuggets era tag claimed a Finals triple-double average (it was not); corrected. Tags are display-only.
+- How to play / Budget guide now say the weakness wheel offers three flaws and you choose one.
+
+### Ads
+The loader (`PublisherAds`) mounts only on Home, About and the long-form library pages listed in
+`AD_PATHS` (`src/content/library.ts`). The production HTML test fails if an ad page has fewer than 700 words
+in `<main>`, or if any game, share, legal, hub or error page loads the script.
+
+### Still manual
+Same as above: Auto Ads exclusions for game/share/API/legal paths, CMP for EEA/UK/CH, then **request review
+in AdSense** once the deployment is live. Submit the updated sitemap in Search Console first so the new
+pages are discovered.

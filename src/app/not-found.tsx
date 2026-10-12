@@ -1,7 +1,7 @@
 import Link from "@/components/SiteLink";
 export default function NotFound() {
   return (
-    <section className="publisher-content py-8">
+    <section className="publisher-content mx-auto max-w-2xl py-8">
       <p className="eyebrow">404</p>
       <h1>Page not found</h1>
       <p>

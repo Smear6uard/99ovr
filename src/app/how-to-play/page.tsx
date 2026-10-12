@@ -1,4 +1,5 @@
-import { Article, Section, Skills } from "@/components/PublisherContent";
+import { Article, Section } from "@/components/PublisherContent";
+import Link from "@/components/SiteLink";
 import { PublisherAds } from "@/components/PublisherAds";
 import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
@@ -10,6 +11,11 @@ export default function HowToPlay() {
   return (
     <>
       <Article
+        related={[
+          { href: "/modes", title: "Choose your mode" },
+          { href: "/guides/reading-rosters", title: "How to read a roster" },
+          { href: "/decades", title: "Decade guides" },
+        ]}
         title="How to play"
         intro="Build one hypothetical player from six different players’ strengths. Your job is to read the roster, steal the right skill and see how far the finished build can go."
       >
@@ -30,12 +36,16 @@ export default function HowToPlay() {
             show a pool for your chosen position across franchises.
           </p>
           <p>
-            The six rounds always follow the attribute order below. Select one
-            player to supply only that round’s skill. The remaining skills still
-            need other players. Once used, that player cannot be used again in
-            the same run, even if another roster includes them.
+            The six rounds always come in the same order: Jumpshot, Handles,
+            Finishing, Playmaking, Defense, then Athleticism. Select one player
+            to supply only that round’s skill. The remaining skills still need
+            other players. Once used, that player cannot be used again in the
+            same run, even if another roster includes them.{" "}
+            <Link href="/guides/skills">The skills guide</Link> explains what
+            each one measures, and{" "}
+            <Link href="/guides/reading-rosters">reading a roster</Link> covers
+            how to spot the right player.
           </p>
-          <Skills />
         </Section>
         <Section title="3. Spend re-spins deliberately">
           <p>
@@ -55,14 +65,17 @@ export default function HowToPlay() {
           <p>
             Start with $15 in game money. Prices refer to the current skill, not
             the player’s entire career. The game reserves at least $1 for each
-            remaining pick. After three steals, the weakness wheel gives you a
-            flaw and a refund: Mild +$1, Bad +$2, Brutal +$3 or
-            Career-Threatening +$3.
+            remaining pick. After three steals, the weakness wheel deals three
+            flaws and you must take one. Its severity sets the refund: Mild +$1,
+            Bad +$2, Brutal +$3 or Career-Threatening +$3.
           </p>
           <p>
             The refund funds your last three picks, but the flaw can hurt your
             boss matchups. A larger wallet does not erase that risk. Classic and
-            Daily do not have this weakness wheel.
+            Daily do not have this weakness wheel. See{" "}
+            <Link href="/guides/budget-strategy">Budget strategy</Link> and{" "}
+            <Link href="/guides/weakness-wheel">every flaw</Link> before your
+            first $15 run.
           </p>
         </Section>
         <Section title="5. Read the verdict">
@@ -77,7 +90,8 @@ export default function HowToPlay() {
             The gauntlet has ten bosses, with a separate ladder for each
             position. Matchups are first to 11; the first loss ends the run.
             Open the game log to inspect each played round and any weakness
-            effects. A seeded simulation makes the same saved build reproducible
+            effects; the <Link href="/guides/boss-gauntlet">gauntlet guide</Link>{" "}
+            scouts every boss. A seeded simulation makes the same saved build reproducible
             under the same game rules.
           </p>
         </Section>
@@ -95,6 +109,30 @@ export default function HowToPlay() {
             athleticism. For better grades, judge the skill being asked for
             instead of choosing by scoring average. Keep a versatile player
             available when a narrower specialist can cover the current round.
+          </p>
+        </Section>
+        <Section title="Settings, sound and accessibility">
+          <p>
+            There is nothing to install and no account to create. Arcade sounds
+            start switched off; the “sounds” switch at the bottom of every page
+            turns them on, and the choice is remembered in this browser. On
+            phones that support it, spins and landings also give a short
+            vibration.
+          </p>
+          <p>
+            If your device asks apps to reduce motion, 99OVR honors it: the
+            reels stop without the spin, the landing shake and slam effects are
+            skipped and the OVR appears without counting up. Everything is
+            playable from a keyboard, since each roster row is a real button
+            labeled with the skill, the player and, in Budget, the price, and a
+            skip link jumps straight to the page content.
+          </p>
+          <p>
+            Your personal best, Daily result and streak are stored on this
+            device only. Clearing site data resets them, and they do not follow
+            you to another browser. The{" "}
+            <Link href="/privacy">privacy policy</Link> lists exactly what is
+            stored.
           </p>
         </Section>
       </Article>

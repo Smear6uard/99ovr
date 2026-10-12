@@ -1,198 +1,144 @@
+import { Article, Section } from "@/components/PublisherContent";
 import { PublisherAds } from "@/components/PublisherAds";
 import { pageMetadata } from "@/lib/metadata";
 import Link from "@/components/SiteLink";
-import { GAUNTLET } from "@/data/gauntlet";
 import { DECADE_BUCKETS, DECADE_FRANCHISES } from "@/data/eras/decades";
-import { RATING_TIERS } from "@/config/ratingTiers";
-import { STEAL_BUDGET } from "@/lib/steal";
-import { ATTR_LABELS, ATTRS } from "@/lib/types";
+import { DECADE_GUIDES } from "@/content/decades";
+import { decadePool } from "@/content/rosters";
 
-export const metadata = pageMetadata("About 99OVR & FAQ", "Why 99OVR combines a roster knowledge test, six editorial skill ratings and a boss verdict, plus answers to common game questions.", "/about");
+export const metadata = pageMetadata(
+  "About 99OVR & FAQ",
+  "Who makes 99OVR, why it separates a pick’s grade from a build’s OVR, how the editorial ratings are made and corrected, plus answers to common questions.",
+  "/about",
+);
 
 const FAQ = [
   {
+    q: "Do I need an account?",
+    a: "No. The game runs in your browser. Personal bests, Daily progress and your streak stay on that device; submitting initials to the Daily leaderboard is optional.",
+  },
+  {
     q: "Why can't I hit 99 OVR?",
-    a: "The current six-steal formula caps OVR at 97. The GOAT tier starts at 96, but 99 itself is unreachable. Strong grades alone cannot overcome low skill values.",
+    a: "The current six-steal formula caps OVR at 97. The GOAT tier starts at 96, but 99 itself is unreachable — that is the joke in the name, and the point.",
+  },
+  {
+    q: "Can one legend fill all six skills?",
+    a: "No. Once you steal from a player, that player is unavailable for the rest of the run, even if another roster includes them. Find the specialist who covers this round.",
   },
   {
     q: "There are no prices in Classic. How am I supposed to know who's good?",
-    a: "That's the test. Box stats only partly signal a skill — scoring 28 a game tells you nothing about handles. A familiar scoring average can distract from a less famous player’s stronger skill. Deep cuts are rewarded on purpose. If you want prices, that's what Budget is for.",
+    a: "That's the test. Box stats only partly signal a skill — scoring 28 a game tells you nothing about defense. Deep cuts are rewarded on purpose. If you want prices, that's what Budget is for, and the roster-reading guide covers the rest.",
   },
   {
     q: "What's the difference between my grade and my OVR?",
-    a: "The grade is the decision; the OVR is the outcome. Taking the best handles on a rough roster is an A+ even though the number is still a 74 — you read the room perfectly and the roster just didn't have more. Rough eras are winnable on grades and brutal on OVR.",
+    a: "The grade is the decision; the OVR is the outcome. Taking the best handles on a rough roster is an A+ even if the number is modest — you read the room perfectly and the roster just didn't have more.",
+  },
+  {
+    q: "Is the Daily the same for everyone?",
+    a: "The starting wheel and target are the same for everyone on a UTC day. Your re-spins and picks still change your path. Classic gives you fresh runs whenever you want more.",
   },
   {
     q: "Same run, different results?",
-    a: "Every sim is seeded. The same code and game rules replay identically — in the app, on a share link, and in the preview image. Run It Back starts a whole new build on a fresh wheel.",
+    a: "Every simulation is seeded. The same build code replays identically under the same rules — in the app, on a share link and in the preview image. Run It Back starts a new build on a fresh wheel.",
   },
   {
     q: "How does the Daily leaderboard stop cheaters?",
-    a: "You submit a build code and three initials; the service also processes request information for abuse prevention. The server replays the code against today's wheel — wrong seed, impossible landing, extra re-spins, or a practice attempt all get rejected — and derives the score itself. This is not a guarantee that all abuse can be prevented.",
+    a: "You submit a build code and three initials; the service also processes request information for abuse prevention. The server replays the code against today's wheel — a wrong seed, an impossible landing, extra re-spins or a practice attempt are rejected — and derives the score itself. That is validation, not a guarantee that every kind of abuse is impossible.",
   },
   {
     q: "A player's rating is disrespectful.",
-    a: "File a complaint at the barbershop. (The ratings are the debate — that's the game.)",
-  },
-  {
-    q: "What decides who wins a Round?",
-    a: "Your offense, defense, playmaking, and — in close matchups — a seeded variance roll. Large power gaps are deterministic, so an elite build cannot randomly lose to an early boss. In Budget, your flaw also matters. First to 11; first loss ends the run.",
+    a: "The ratings are the debate — that's the game. If you have a real basketball case, send it; see “Corrections” above.",
   },
 ];
 
 export default function AboutPage() {
-  const rough = DECADE_BUCKETS.filter((bucket) => bucket.vibe === "rough").length;
+  const poolSize = DECADE_GUIDES.reduce((sum, guide) => sum + decadePool(guide.decade).length, 0);
 
   return (
-    <article className="prose-invert pt-2 text-[14px] leading-relaxed text-paper">
-      <h1 className="font-display text-3xl uppercase leading-tight">About 99OVR</h1>
-      <p className="mt-2 text-paper/80">
-        A run should feel like three things in order: a <strong>gamble</strong>, a{" "}
-        <strong>knowledge test</strong>, then a <strong>judgment</strong>.
-      </p>
+    <>
+      <Article
+        title="About 99OVR"
+        intro="A run should feel like three things in order: a gamble, a knowledge test, then a judgment. Everything about the game is built to keep those three separate."
+        eyebrow="About"
+        related={[
+          { href: "/scoring", title: "Ratings & scoring" },
+          { href: "/guides/skills", title: "The six skills, explained" },
+          { href: "/contact", title: "Contact" },
+        ]}
+      >
+        <Section id="why" title="Basketball knowledge, one skill at a time">
+          <p>
+            Every basketball argument about the perfect player — Curry&rsquo;s shot, Kawhi&rsquo;s hands, Shaq&rsquo;s
+            size — eventually turns into a list. 99OVR turns that list into six concrete decisions made under
+            pressure. A famous name is only useful if it answers the skill in front of you, and the roster in front of
+            you is decided by a wheel, not by you.
+          </p>
+          <p>
+            That is the design in one sentence: luck chooses the roster, knowledge chooses the player, and the
+            simulation judges the result. The grade tells you whether you read the roster well. The OVR tells you
+            what the six skills add up to. The boss gauntlet tells you whether that was enough. Keeping those three
+            apart is what lets a perfect read of a terrible roster still feel like a win.
+          </p>
+        </Section>
 
+        <Section id="ratings" title="How the ratings are made">
+          <p>
+            Every player carries six ratings, one per skill, on a fixed scale where 99 means the best there has ever
+            been at that one thing and the 30s are reserved for genuine weaknesses. A great scorer can be an average
+            passer; a bench big can be the best defender on his roster. Splitting a player into six judgments is the
+            whole point.
+          </p>
+          <p>
+            Players are rated inside their decade. A 1960s set shooter is measured against the shooting of his own
+            era rather than against a modern three-point specialist, and each{" "}
+            <Link href="/decades">decade guide</Link> explains how its pool was calibrated. The headline rosters and
+            all seven positional pools — {poolSize} players across {DECADE_GUIDES.length} decades — were written and
+            rated by hand, including the one-line note on every card.
+          </p>
+          <p>
+            The deeper bench of each franchise roster ({DECADE_BUCKETS.length} decade rosters across{" "}
+            {DECADE_FRANCHISES.length} franchises) is filled from a public-domain historical box-score dataset, so
+            those cards show decade averages instead of a hand-written note. A consistency check keeps a recognized
+            specialist on the same standard whether he appears on a headline roster, a positional pool or a bench
+            list, and stops a late-career card from inheriting prime athleticism.
+          </p>
+          <p className="callout">
+            These are 99OVR&rsquo;s own editorial game ratings. They are basketball opinions calibrated for this game,
+            not official NBA ratings, a statistical model or a claim about any real player&rsquo;s ability.
+          </p>
+        </Section>
+
+        <Section id="corrections" title="Corrections">
+          <p>
+            Ratings get revised when someone makes a better basketball case than ours. If you disagree with a card,{" "}
+            <Link href="/contact">email us</Link> with the player, the roster or decade, the skill and your reasoning.
+            Players can be re-rated, but rosters are never reordered or trimmed, so an old share link always points
+            at the same players it was built from.
+          </p>
+        </Section>
+
+        <Section id="publisher" title="Who makes 99OVR">
+          <p>
+            99OVR is designed, written and published by Sameer Studios LLC. It is a fan-made game: it is not
+            affiliated with or endorsed by the NBA, its teams or its players, and it uses no team logos or player
+            likenesses. Player names appear in a fantasy-game context. There are no real-money purchases; Budget
+            mode&rsquo;s dollars are game currency. The game is free to play and supported by advertising on our
+            guide pages, never inside the game screens.
+          </p>
+        </Section>
+
+        <Section id="faq" title="FAQ">
+          <dl className="skill-list">
+            {FAQ.map((f) => (
+              <div key={f.q}>
+                <dt>{f.q}</dt>
+                <dd>{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+      </Article>
       <PublisherAds />
-      <section className="mt-5">
-        <h2 className="font-display text-xl uppercase text-gold">Basketball knowledge, one skill at a time</h2>
-        <p className="mt-2 text-paper/80">99OVR exists to turn the argument about a perfect player into six concrete choices. A famous name is only useful if it answers the skill in front of you. The wheel creates constraints; the grades recognize good reads even when the roster cannot supply a great raw rating. Sameer Studios LLC publishes the game.</p>
-        <p className="mt-2 text-paper/80">The design keeps luck, knowledge and outcome visible: a limited re-spin can change your options, one-use players force tradeoffs, and the final card separates your decision grades from the build’s strength. Ratings are our fictional/editorial judgments for entertainment.</p>
-        <p className="mt-2"><Link className="text-gold underline" href="/how-to-play">Step-by-step guide</Link> · <Link className="text-gold underline" href="/scoring">Scoring methodology</Link></p>
-      </section>
-      <section className="mt-5">
-        <h2 className="font-display text-xl uppercase text-gold">The core loop</h2>
-        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-paper/90">
-          <li>
-            Six rounds, one per attribute: {ATTRS.map((attr) => ATTR_LABELS[attr]).join(", ")}.
-          </li>
-          <li>
-            In Best Player, each round the slot machine lands on a real franchise and decade &mdash; {DECADE_BUCKETS.length}{" "}
-            all-decade rosters across {DECADE_FRANCHISES.length} franchises, and {rough} are genuinely rough. The
-            groans are part of it.
-          </li>
-          <li>
-            The all-decade roster appears &mdash; a curated game pool of players associated with that franchise in the decade.{" "}
-            <strong>Steal one player&rsquo;s skill</strong> for that attribute. Hidden per-attribute ratings grade
-            every steal at the end.
-          </li>
-          <li>A player can be stolen from only once per run. No doubling up on one legend.</li>
-          <li>
-            Skips: one <strong>team re-spin</strong> (same decade, different franchise) and one{" "}
-            <strong>decade re-spin</strong> (same franchise, different decade) per run. Each changes only its named
-            reel. Positional runs instead have one decade re-spin for the entire run.
-          </li>
-          <li>Then beat 10 boss legends 1v1. Lose one Round and it&apos;s over.</li>
-        </ul>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="font-display text-xl uppercase text-gold">Four modes</h2>
-        <dl className="mt-2 space-y-3 text-paper/90">
-          <div>
-            <dt className="font-bold">
-              <Link href="/daily" className="text-gold underline underline-offset-2">
-                Daily
-              </Link>
-            </dt>
-            <dd className="mt-0.5 text-paper/80">
-              Date-seeded: everyone on Earth gets the identical spin sequence and rosters. One official run per UTC
-              day, a streak, and an arcade leaderboard — three initials, top 50, resets at midnight UTC.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-bold">
-              <Link href="/play" className="text-gold underline underline-offset-2">
-                Classic
-              </Link>
-            </dt>
-            <dd className="mt-0.5 text-paper/80">
-              The pure knowledge test. A quick setup sheet first: Normal or Ball Knowledge (names only), and a build
-              target — Best Player, or a positional challenge (Best PG through Best C) with that position&apos;s
-              scoring weights, position-specific decade pools and all-time boss ladder. No flaw anywhere in this mode.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-bold">
-              <Link href="/budget" className="text-gold underline underline-offset-2">
-                Budget
-              </Link>
-            </dt>
-            <dd className="mt-0.5 text-paper/80">
-              Same loop, but every roster player shows a price for the current attribute and the run has $
-              {STEAL_BUDGET} total. After three steals the <strong>weakness wheel</strong> interrupts: take a flaw,
-              and the worse it is, the more budget it refunds for the last three steals (Mild +$1 · Bad +$2 ·
-              Brutal +$3 · Career-Threatening +$3). Someone on every roster is on a $1 minimum contract.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-bold">
-              <Link href="/h2h" className="text-gold underline underline-offset-2">
-                Head to Head
-              </Link>
-            </dt>
-            <dd className="mt-0.5 text-paper/80">
-              After any Classic run, mint a challenge link. Your friend plays the identical spins and rosters, then
-              a side-by-side verdict compares every grade, crowns the higher OVR (grade points break ties), and
-              roasts the loser. No accounts — the code carries everything.
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="font-display text-xl uppercase text-gold">The verdict</h2>
-        <p className="mt-1 text-paper/80">
-          After the sixth steal: a short simulation beat, then one screen with everything &mdash; your OVR count-up
-          and tier, all six grades, <strong>Best Steal</strong> and <strong>The Reach</strong>, how far you got in
-          the boss gauntlet (full game log behind &ldquo;view log&rdquo; for whoever wants it), and the roast. Then
-          Run It Back &mdash; a fresh wheel, a whole new build.
-        </p>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="font-display text-xl uppercase text-gold">The gauntlet</h2>
-        <p className="mt-1 text-paper/80">
-          Ten Rounds, each with a boss. Positional runs face that position&apos;s all-time ladder instead.
-        </p>
-        <ol className="mt-2 space-y-1">
-          {GAUNTLET.map((r) => (
-            <li key={r.id} className="flex items-baseline gap-3 border-b border-line/50 py-1.5">
-              <span className="w-16 shrink-0 text-right font-display text-base text-dim">Round {r.rung}</span>
-              <span className="flex-1 font-semibold">Boss: {r.name}</span>
-              <span className="text-[12px] text-dim">{r.title}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="font-display text-xl uppercase text-gold">Rating tiers</h2>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {RATING_TIERS.map((tier) => (
-            <div key={tier.id} className="border-l-2 bg-panel px-3 py-2" style={{ borderColor: tier.color }}>
-              <strong className="block" style={{ color: tier.color }}>
-                {tier.name}
-              </strong>
-              <span className="text-[12px] text-dim">
-                {tier.min}&ndash;{tier.max} OVR
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-paper/80">GOAT is real but nearly unreachable. 99 is not reachable at all.</p>
-      </section>
-
-      <section className="mt-6">
-        <h2 id="faq" className="font-display text-xl uppercase text-gold">FAQ</h2>
-        <dl className="mt-2 space-y-4">
-          {FAQ.map((f) => (
-            <div key={f.q}>
-              <dt className="font-bold">{f.q}</dt>
-              <dd className="mt-0.5 text-paper/80">{f.a}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-    </article>
+    </>
   );
 }
